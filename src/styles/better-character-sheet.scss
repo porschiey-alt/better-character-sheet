@@ -85,9 +85,6 @@ $radius-sm: 4px;
     // When a DnD Beyond backdrop image is applied via JS
     &.bcs-has-backdrop {
       min-height: 100px;
-      background: none !important;
-      background-size: cover;
-      background-position: center;
       border-bottom-color: transparent;
     }
   }

@@ -626,10 +626,11 @@ export function createBetterCharacterSheet(): any {
       if (context.backdropUrl) {
         const header = this.element.querySelector(".bcs-header") as HTMLElement | null;
         if (header) {
-          header.style.backgroundImage =
-            `linear-gradient(to right, rgba(18,21,26,0.85), rgba(18,21,26,0.5)), url('${context.backdropUrl}')`;
-          header.style.backgroundSize = "cover";
-          header.style.backgroundPosition = "center";
+          header.style.setProperty(
+            "background",
+            `linear-gradient(to right, rgba(18,21,26,0.85), rgba(18,21,26,0.5)), url('${context.backdropUrl}') center / cover no-repeat`,
+            "important"
+          );
           header.classList.add("bcs-has-backdrop");
         }
       }
