@@ -20,11 +20,12 @@ A **D&D Beyond–inspired** character sheet replacement for the [D&D 5th Edition
   - **Notes** — freeform notes
   - **Extras** — defenses, resistances, immunities, and conditions
 - **Defenses & Conditions** — inline status display (resistances, exhaustion, conditions) below AC/Initiative
+- **Custom theming** — per-character accent color and background tint via a built-in theme editor
 - **D&D Beyond backdrop images** — automatically pulls your character's backdrop art from D&D Beyond when using [ddb-importer](https://github.com/MrPrimate/ddb-importer)
 
-| Spells Tab | Feature Detail |
-|:---:|:---:|
-| ![Spells tab showing spell slots and spell list](docs/exampleDruidSpells.png) | ![Feature detail popup showing full description](docs/featureFullExplanation.png) |
+| Spells Tab | Feature Detail | Custom Theme |
+|:---:|:---:|:---:|
+| ![Spells tab showing spell slots and spell list](docs/exampleDruidSpells.png) | ![Feature detail popup showing full description](docs/featureFullExplanation.png) | ![Theme editor with accent color and background tint](docs/customTheme.png) |
 
 ## Requirements
 
