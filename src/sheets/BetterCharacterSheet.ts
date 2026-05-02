@@ -169,8 +169,8 @@ export function createBetterCharacterSheet(): any {
       // Build attacks from weapons AND attack spells
       const attacks: any[] = [];
 
-      // Weapons
-      for (const i of actor.items.filter((i: any) => i.type === "weapon")) {
+      // Weapons — only equipped
+      for (const i of actor.items.filter((i: any) => i.type === "weapon" && i.system.equipped)) {
         attacks.push({
           id: i.id,
           name: i.name,
@@ -188,8 +188,17 @@ export function createBetterCharacterSheet(): any {
         });
       }
 
-      // Attack spells — any spell with an attack or save+damage activity
-      for (const i of actor.items.filter((i: any) => i.type === "spell")) {
+      // Attack spells — only prepared spells with attack or save+damage activities
+      const isSpellAvailable = (s: any) => {
+        const lvl = s.system.level ?? 0;
+        if (lvl === 0) return true;
+        const mode = s.system.preparation?.mode;
+        if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return true;
+        if (mode === "prepared") return !!s.system.preparation?.prepared;
+        return true;
+      };
+
+      for (const i of actor.items.filter((i: any) => i.type === "spell" && isSpellAvailable(i))) {
         const acts = i.system.activities;
         if (!acts) continue;
 
@@ -314,15 +323,6 @@ export function createBetterCharacterSheet(): any {
         (i: any) => i.type === "spell"
       );
 
-      // Filter to only prepared/always/cantrip spells
-      const isSpellAvailable = (s: any) => {
-        const lvl = s.system.level ?? 0;
-        if (lvl === 0) return true; // cantrips always available
-        const mode = s.system.preparation?.mode;
-        if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return true;
-        if (mode === "prepared") return !!s.system.preparation?.prepared;
-        return true; // non-prepared casters (e.g., sorcerer, bard) — all known spells available
-      };
       const spellItems = allSpellItems.filter(isSpellAvailable);
       const spellsByActivation: Record<string, any[]> = {
         bonus: [], reaction: [], other: [], ritual: [],

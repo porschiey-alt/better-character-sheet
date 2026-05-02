@@ -502,9 +502,9 @@ $radius-sm: 4px;
     }
 
     &.expert {
-      background: $gold;
+      background: var(--bcs-accent);
       border-color: var(--bcs-accent);
-      box-shadow: 0 0 0 2px $bg-card, 0 0 0 4px $gold;
+      box-shadow: 0 0 0 2px var(--bcs-bg-card), 0 0 0 4px var(--bcs-accent);
     }
 
     &.half {
@@ -891,7 +891,7 @@ $radius-sm: 4px;
     transition: all 0.15s;
 
     &:hover { color: $text-secondary; border-color: $border-light; }
-    &.active { background: $gold-dim; color: #fff; border-color: var(--bcs-accent-dim); }
+    &.active { background: var(--bcs-accent-dim); color: #fff; border-color: var(--bcs-accent-dim); }
   }
 
   .bcs-action-group { margin-bottom: 14px; }
