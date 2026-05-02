@@ -597,6 +597,10 @@ export function createBetterCharacterSheet(): any {
         conditions,
         hasDefenses,
         backdropUrl,
+        themeAccent: actor.getFlag("better-character-sheet", "themeAccent") || "#c8a85c",
+        themeBg: actor.getFlag("better-character-sheet", "themeBg") || "#12151a",
+        themeGradient: actor.getFlag("better-character-sheet", "themeGradient") || "#12151a",
+        themeGradientDir: actor.getFlag("better-character-sheet", "themeGradientDir") || "none",
         module: "better-character-sheet",
       };
     }
@@ -1045,6 +1049,92 @@ export function createBetterCharacterSheet(): any {
           (el as HTMLElement).style.cursor = "pointer";
         });
 
+      // ========================================
+      // THEME CUSTOMIZATION
+      // ========================================
+      const themePanel = this.element.querySelector(
+        ".bcs-theme-panel"
+      ) as HTMLElement;
+      const themeToggle = this.element.querySelector(".bcs-theme-toggle");
+      const themeClose = this.element.querySelector(".bcs-theme-close");
+
+      // Apply saved theme on render
+      const savedAccent =
+        actor.getFlag("better-character-sheet", "themeAccent") as string;
+      const savedBg =
+        actor.getFlag("better-character-sheet", "themeBg") as string;
+      const savedGradient =
+        actor.getFlag("better-character-sheet", "themeGradient") as string;
+      const savedGradientDir =
+        actor.getFlag("better-character-sheet", "themeGradientDir") as string;
+      if (savedAccent) this._applyAccentColor(savedAccent);
+      if (savedBg) this._applyBgColor(savedBg);
+      if (savedGradient && savedGradientDir && savedGradientDir !== "none") {
+        const darkBg = this._darkenColor(savedBg || "#12151a", 0.82);
+        const darkGrad = this._darkenColor(savedGradient, 0.82);
+        this.element.style.setProperty(
+          "--bcs-bg-gradient-img",
+          `linear-gradient(${savedGradientDir}, ${darkBg}, ${darkGrad})`
+        );
+      }
+
+      // Toggle panel
+      themeToggle?.addEventListener("click", () => {
+        themePanel.dataset.panel =
+          themePanel.dataset.panel === "open" ? "closed" : "open";
+      });
+      themeClose?.addEventListener("click", () => {
+        themePanel.dataset.panel = "closed";
+      });
+
+      // Color inputs
+      this.element
+        .querySelectorAll(".bcs-theme-input")
+        .forEach((input: Element) => {
+          input.addEventListener("input", (e: Event) => {
+            const el = e.target as HTMLInputElement;
+            const key = el.dataset.theme;
+            if (key === "accentColor") this._applyAccentColor(el.value);
+            if (key === "bgColor") this._applyBgColor(el.value);
+            // Live gradient update on any color change
+            this._applyGradientFromDOM();
+          });
+          input.addEventListener("change", (e: Event) => {
+            const el = e.target as HTMLInputElement;
+            const key = el.dataset.theme;
+            const flagMap: Record<string, string> = {
+              accentColor: "themeAccent",
+              bgColor: "themeBg",
+              gradientColor: "themeGradient",
+            };
+            const flag = flagMap[key || ""];
+            if (flag) actor.setFlag("better-character-sheet", flag, el.value);
+          });
+        });
+
+      // Gradient direction select
+      this.element
+        .querySelectorAll(".bcs-theme-select")
+        .forEach((sel: Element) => {
+          sel.addEventListener("change", (e: Event) => {
+            const el = e.target as HTMLSelectElement;
+            this._applyGradientFromDOM();
+            actor.setFlag("better-character-sheet", "themeGradientDir", el.value);
+          });
+        });
+
+      // Reset button
+      this.element
+        .querySelector(".bcs-theme-reset")
+        ?.addEventListener("click", async () => {
+          await actor.unsetFlag("better-character-sheet", "themeAccent");
+          await actor.unsetFlag("better-character-sheet", "themeBg");
+          await actor.unsetFlag("better-character-sheet", "themeGradient");
+          await actor.unsetFlag("better-character-sheet", "themeGradientDir");
+          this.element.removeAttribute("style");
+          this.render();
+        });
+
       // Detail panel: click truncated text to show full description
       const panel = this.element.querySelector(
         ".bcs-detail-panel"
@@ -1095,5 +1185,58 @@ export function createBetterCharacterSheet(): any {
         hookData
       );
     }
+
+    // Darken a hex color by mixing with near-black
+    _darkenColor(hex: string, amount = 0.7): string {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      const dr = Math.round(r * (1 - amount));
+      const dg = Math.round(g * (1 - amount));
+      const db = Math.round(b * (1 - amount));
+      return `#${dr.toString(16).padStart(2, "0")}${dg.toString(16).padStart(2, "0")}${db.toString(16).padStart(2, "0")}`;
+    }
+
+    _applyAccentColor(color: string) {
+      const el = this.element;
+      el.style.setProperty("--bcs-accent", color);
+      // Dimmed version for borders
+      el.style.setProperty("--bcs-accent-dim", this._darkenColor(color, 0.4));
+    }
+
+    _applyBgColor(color: string) {
+      const el = this.element;
+      const darkBg = this._darkenColor(color, 0.82);
+      const cardBg = this._darkenColor(color, 0.75);
+      const cardAlt = this._darkenColor(color, 0.65);
+      el.style.setProperty("--bcs-bg-dark", darkBg);
+      el.style.setProperty("--bcs-bg-card", cardBg);
+      el.style.setProperty("--bcs-bg-card-alt", cardAlt);
+    }
+
+    _applyGradientFromDOM() {
+      const bgInput = this.element.querySelector(
+        '[data-theme="bgColor"]'
+      ) as HTMLInputElement;
+      const gradInput = this.element.querySelector(
+        '[data-theme="gradientColor"]'
+      ) as HTMLInputElement;
+      const dirSelect = this.element.querySelector(
+        '[data-theme="gradientDir"]'
+      ) as HTMLSelectElement;
+      if (!bgInput || !gradInput || !dirSelect) return;
+      const dir = dirSelect.value;
+      if (dir === "none") {
+        this.element.style.removeProperty("--bcs-bg-gradient-img");
+        return;
+      }
+      const darkBg = this._darkenColor(bgInput.value, 0.82);
+      const darkGrad = this._darkenColor(gradInput.value, 0.82);
+      this.element.style.setProperty(
+        "--bcs-bg-gradient-img",
+        `linear-gradient(${dir}, ${darkBg}, ${darkGrad})`
+      );
+    }
   };
 }
+

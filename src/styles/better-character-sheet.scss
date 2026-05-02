@@ -22,14 +22,21 @@ $radius: 6px;
 $radius-sm: 4px;
 
 .better-character-sheet {
+  // CSS custom properties for theming
+  --bcs-accent: #{$gold};
+  --bcs-accent-dim: #{$gold-dim};
+  --bcs-bg-dark: #{$bg-dark};
+  --bcs-bg-card: #{$bg-card};
+  --bcs-bg-card-alt: #{$bg-card-alt};
+
   font-family: "Roboto", "Roboto Condensed", "Helvetica Neue", Arial, sans-serif;
-  background: $bg-dark !important;
+  background: var(--bcs-bg-dark) !important;
   color: $text-primary;
   font-size: 13px;
 
   // Force opaque background on the entire application window
   &.application {
-    background: $bg-dark !important;
+    background: var(--bcs-bg-dark) !important;
   }
 
   // Override standard-form grid layout that hides the header behind content
@@ -41,13 +48,14 @@ $radius-sm: 4px;
 
   .window-content {
     padding: 0;
-    background: $bg-dark !important;
     overflow-y: auto;
     overflow-x: hidden;
     flex: 1 1 0% !important;
     min-height: 0 !important;
     height: auto !important;
     margin-top: 0 !important;
+    background-color: var(--bcs-bg-dark) !important;
+    background-image: var(--bcs-bg-gradient-img, none) !important;
   }
 
   // Window header
@@ -76,7 +84,7 @@ $radius-sm: 4px;
     align-items: center;
     gap: 12px;
     padding: 10px 14px;
-    background: $bg-card !important;
+    background: var(--bcs-bg-card) !important;
     border-bottom: 1px solid $border-color;
     position: relative;
     z-index: 1;
@@ -163,8 +171,8 @@ $radius-sm: 4px;
 
     &:hover {
       background: $bg-input;
-      color: $gold;
-      border-color: $gold-dim;
+      color: var(--bcs-accent);
+      border-color: var(--bcs-accent-dim);
     }
 
     i {
@@ -178,7 +186,7 @@ $radius-sm: 4px;
     align-items: stretch;
     gap: 16px;
     padding: 5px 10px;
-    background: $bg-card !important;
+    background: var(--bcs-bg-card) !important;
     border-bottom: 1px solid $border-color;
     position: relative;
     z-index: 1;
@@ -203,7 +211,7 @@ $radius-sm: 4px;
     align-items: center;
     justify-content: center;
     background: #0e1016;
-    border: 1px solid $gold-dim;
+    border: 1px solid var(--bcs-accent-dim);
     border-radius: $radius;
     padding: 4px 0;
     width: 87px;
@@ -212,14 +220,14 @@ $radius-sm: 4px;
     transition: border-color 0.15s;
 
     &:hover {
-      border-color: $gold;
+      border-color: var(--bcs-accent);
     }
   }
 
   .bcs-ability-label {
     font-size: 0.55rem;
     font-weight: 600;
-    color: $gold;
+    color: var(--bcs-accent);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
@@ -242,7 +250,7 @@ $radius-sm: 4px;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: $bg-card-alt;
+    background: var(--bcs-bg-card-alt);
     border: 1px solid $border-color;
     border-radius: $radius;
     padding: 4px 10px;
@@ -254,7 +262,7 @@ $radius-sm: 4px;
   .bcs-stat-bg-icon {
     position: absolute;
     font-size: 2.2rem;
-    color: $gold-dim;
+    color: var(--bcs-accent-dim);
     opacity: 0.2;
     pointer-events: none;
   }
@@ -284,16 +292,16 @@ $radius-sm: 4px;
     transition: all 0.15s;
 
     &.active {
-      border-color: $gold;
-      .bcs-stat-value { color: $gold; }
+      border-color: var(--bcs-accent);
+      .bcs-stat-value { color: var(--bcs-accent); }
       .bcs-stat-bg-icon { opacity: 0.35; }
     }
 
-    &:hover { border-color: $gold-dim; }
+    &:hover { border-color: var(--bcs-accent-dim); }
   }
 
   .bcs-ac-stat {
-    border-color: $gold-dim;
+    border-color: var(--bcs-accent-dim);
   }
 
   // HP Block — [Input] [Heal/Dmg] [HP readout]
@@ -303,7 +311,7 @@ $radius-sm: 4px;
     border: 1px solid $border-color;
     border-radius: $radius;
     overflow: hidden;
-    background: $bg-card-alt;
+    background: var(--bcs-bg-card-alt);
     height: 100%;
   }
 
@@ -439,7 +447,7 @@ $radius-sm: 4px;
     flex-shrink: 0;
     border-right: 1px solid $border-color;
     overflow-y: auto;
-    background: $bg-card;
+    background: var(--bcs-bg-card);
   }
 
   .bcs-col-mid {
@@ -447,13 +455,13 @@ $radius-sm: 4px;
     flex-shrink: 0;
     border-right: 1px solid $border-color;
     overflow-y: auto;
-    background: $bg-card;
+    background: var(--bcs-bg-card);
   }
 
   .bcs-col-right {
     flex: 1;
     overflow: hidden;
-    background: $bg-dark;
+    background: var(--bcs-bg-dark);
     display: flex;
     flex-direction: column;
   }
@@ -470,7 +478,7 @@ $radius-sm: 4px;
   .bcs-section-title {
     font-size: 0.7rem;
     font-weight: 700;
-    color: $gold;
+    color: var(--bcs-accent);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     border-bottom: 1px solid $border-color;
@@ -495,7 +503,7 @@ $radius-sm: 4px;
 
     &.expert {
       background: $gold;
-      border-color: $gold;
+      border-color: var(--bcs-accent);
       box-shadow: 0 0 0 2px $bg-card, 0 0 0 4px $gold;
     }
 
@@ -521,7 +529,7 @@ $radius-sm: 4px;
 
   .bcs-ac-shield {
     font-size: 3rem;
-    color: $gold-dim;
+    color: var(--bcs-accent-dim);
     position: absolute;
     top: 0;
     left: 50%;
@@ -540,7 +548,7 @@ $radius-sm: 4px;
 
   .bcs-ac-label {
     font-size: 0.6rem;
-    color: $gold;
+    color: var(--bcs-accent);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-top: 2px;
@@ -561,7 +569,7 @@ $radius-sm: 4px;
     justify-content: space-between;
     align-items: center;
     padding: 3px 6px;
-    background: $bg-card-alt;
+    background: var(--bcs-bg-card-alt);
     border-radius: $radius-sm;
   }
 
@@ -592,7 +600,7 @@ $radius-sm: 4px;
     cursor: pointer;
 
     &:hover {
-      background: $bg-card-alt;
+      background: var(--bcs-bg-card-alt);
     }
   }
 
@@ -691,7 +699,7 @@ $radius-sm: 4px;
     cursor: pointer;
 
     &:hover {
-      background: $bg-card-alt;
+      background: var(--bcs-bg-card-alt);
     }
   }
 
@@ -732,13 +740,13 @@ $radius-sm: 4px;
     display: flex;
     gap: 6px;
     padding: 8px 10px;
-    background: $bg-card;
+    background: var(--bcs-bg-card);
     border-bottom: 1px solid $border-color;
     flex-shrink: 0;
   }
 
   .bcs-combat-card {
-    background: $bg-card-alt;
+    background: var(--bcs-bg-card-alt);
     border: 1px solid $border-color;
     border-radius: $radius;
     padding: 6px 12px;
@@ -753,7 +761,7 @@ $radius-sm: 4px;
 
   .bcs-combat-init {
     cursor: pointer;
-    &:hover { border-color: $gold-dim; }
+    &:hover { border-color: var(--bcs-accent-dim); }
   }
 
   .bcs-spell-row { cursor: pointer; }
@@ -764,7 +772,7 @@ $radius-sm: 4px;
   .bcs-combat-card-bg {
     position: absolute;
     font-size: 2.5rem;
-    color: $gold-dim;
+    color: var(--bcs-accent-dim);
     opacity: 0.2;
     pointer-events: none;
   }
@@ -787,7 +795,7 @@ $radius-sm: 4px;
   }
 
   .bcs-combat-ac {
-    border-color: $gold-dim;
+    border-color: var(--bcs-accent-dim);
   }
 
   .bcs-combat-defenses {
@@ -810,7 +818,7 @@ $radius-sm: 4px;
     font-weight: 600;
 
     &.resist { background: rgba($blue, 0.2); color: $blue; }
-    &.immune { background: rgba($gold, 0.2); color: $gold; }
+    &.immune { background: rgba($gold, 0.2); color: var(--bcs-accent); }
     &.cond-immune { background: rgba($green, 0.2); color: $green; }
     &.condition { background: rgba($red, 0.2); color: $red; }
   }
@@ -827,7 +835,7 @@ $radius-sm: 4px;
     display: flex;
     gap: 0;
     border-bottom: 2px solid $border-color;
-    background: $bg-card;
+    background: var(--bcs-bg-card);
     padding: 0 8px;
     flex-shrink: 0;
   }
@@ -847,8 +855,8 @@ $radius-sm: 4px;
 
     &:hover { color: $text-secondary; }
     &.active {
-      color: $gold;
-      border-bottom-color: $gold;
+      color: var(--bcs-accent);
+      border-bottom-color: var(--bcs-accent);
     }
   }
 
@@ -873,7 +881,7 @@ $radius-sm: 4px;
   }
 
   .bcs-filter-pill {
-    background: $bg-card;
+    background: var(--bcs-bg-card);
     border: 1px solid $border-color;
     color: $text-muted;
     padding: 3px 10px;
@@ -883,7 +891,7 @@ $radius-sm: 4px;
     transition: all 0.15s;
 
     &:hover { color: $text-secondary; border-color: $border-light; }
-    &.active { background: $gold-dim; color: #fff; border-color: $gold-dim; }
+    &.active { background: $gold-dim; color: #fff; border-color: var(--bcs-accent-dim); }
   }
 
   .bcs-action-group { margin-bottom: 14px; }
@@ -891,7 +899,7 @@ $radius-sm: 4px;
   .bcs-action-group-title {
     font-size: 0.72rem;
     font-weight: 700;
-    color: $gold;
+    color: var(--bcs-accent);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 6px;
@@ -961,7 +969,7 @@ $radius-sm: 4px;
   .bcs-action-section-header {
     font-size: 0.72rem;
     font-weight: 700;
-    color: $gold;
+    color: var(--bcs-accent);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 1px solid $border-color;
@@ -992,7 +1000,7 @@ $radius-sm: 4px;
     font-size: 0.9rem;
     cursor: pointer;
 
-    &:hover { color: $gold; }
+    &:hover { color: var(--bcs-accent); }
   }
 
   .bcs-action-feature-desc {
@@ -1062,7 +1070,7 @@ $radius-sm: 4px;
 
   .bcs-action-spell-ref {
     cursor: pointer;
-    &:hover em { color: $gold; }
+    &:hover em { color: var(--bcs-accent); }
   }
 
   .bcs-action-spell-ref em {
@@ -1117,7 +1125,7 @@ $radius-sm: 4px;
   .bcs-spell-level-title {
     font-size: 0.72rem;
     font-weight: 700;
-    color: $gold;
+    color: var(--bcs-accent);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -1134,7 +1142,7 @@ $radius-sm: 4px;
     justify-content: center;
     width: 24px;
     height: 24px;
-    border: 2px solid $gold;
+    border: 2px solid var(--bcs-accent);
     border-radius: 4px;
     font-size: 14px;
     cursor: pointer;
@@ -1142,7 +1150,7 @@ $radius-sm: 4px;
     background: transparent;
 
     &.used {
-      color: $gold;
+      color: var(--bcs-accent);
       background: rgba($gold, 0.15);
 
       &::after { content: "✓"; }
@@ -1205,7 +1213,7 @@ $radius-sm: 4px;
   }
 
   .bcs-spell-icon {
-    color: $gold;
+    color: var(--bcs-accent);
     margin-left: 4px;
     font-size: 0.7rem;
   }
@@ -1235,7 +1243,7 @@ $radius-sm: 4px;
   .bcs-inv-gold {
     font-size: 1rem;
     font-weight: 700;
-    color: $gold;
+    color: var(--bcs-accent);
   }
 
   .bcs-inv-filters {
@@ -1287,7 +1295,7 @@ $radius-sm: 4px;
     font-size: 0.85rem;
     cursor: pointer;
     color: $text-muted;
-    &.equipped { color: $gold; }
+    &.equipped { color: var(--bcs-accent); }
   }
 
   .bcs-inv-name-cell {
@@ -1298,7 +1306,7 @@ $radius-sm: 4px;
   .bcs-inv-item-name {
     color: $text-primary;
     font-weight: 500;
-    &.attuned { color: $gold; font-style: italic; }
+    &.attuned { color: var(--bcs-accent); font-style: italic; }
   }
 
   .bcs-inv-item-type {
@@ -1319,7 +1327,7 @@ $radius-sm: 4px;
   .bcs-feature-group-title {
     font-size: 0.72rem;
     font-weight: 700;
-    color: $gold;
+    color: var(--bcs-accent);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 6px;
@@ -1376,7 +1384,7 @@ $radius-sm: 4px;
     justify-content: center;
     width: 24px;
     height: 24px;
-    border: 2px solid $gold;
+    border: 2px solid var(--bcs-accent);
     border-radius: 4px;
     font-size: 14px;
     cursor: pointer;
@@ -1385,7 +1393,7 @@ $radius-sm: 4px;
 
     // filled = available (unchecked), not filled = used up (checked)
     &:not(.filled) {
-      color: $gold;
+      color: var(--bcs-accent);
       background: rgba($gold, 0.15);
 
       &::after { content: "✓"; }
@@ -1408,7 +1416,7 @@ $radius-sm: 4px;
     p { margin: 4px 0; }
     strong { color: $text-primary; }
     em { color: $text-secondary; }
-    a { color: $gold; }
+    a { color: var(--bcs-accent); }
     ul, ol { padding-left: 16px; margin: 4px 0; }
   }
 
@@ -1420,7 +1428,7 @@ $radius-sm: 4px;
   .bcs-bio-label {
     font-size: 0.72rem;
     font-weight: 700;
-    color: $gold;
+    color: var(--bcs-accent);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 4px;
@@ -1431,7 +1439,7 @@ $radius-sm: 4px;
     font-size: 0.85rem;
     line-height: 1.5;
     padding: 6px 8px;
-    background: $bg-card;
+    background: var(--bcs-bg-card);
     border-radius: $radius;
     min-height: 24px;
   }
@@ -1441,7 +1449,7 @@ $radius-sm: 4px;
 
     h1, h2, h3, h4 { color: $text-primary; margin-top: 8px; }
     p { margin: 4px 0; }
-    a { color: $gold; }
+    a { color: var(--bcs-accent); }
   }
 
   // ===== EXTRAS TAB =====
@@ -1450,7 +1458,7 @@ $radius-sm: 4px;
   .bcs-extras-title {
     font-size: 0.72rem;
     font-weight: 700;
-    color: $gold;
+    color: var(--bcs-accent);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 6px;
@@ -1474,7 +1482,7 @@ $radius-sm: 4px;
   }
 
   .bcs-extras-tag {
-    background: $bg-card-alt;
+    background: var(--bcs-bg-card-alt);
     color: $text-secondary;
     padding: 2px 8px;
     border-radius: 10px;
@@ -1511,7 +1519,7 @@ $radius-sm: 4px;
 
     &:hover {
       color: $text-secondary;
-      border-left-color: $gold-dim;
+      border-left-color: var(--bcs-accent-dim);
     }
   }
 
@@ -1522,7 +1530,7 @@ $radius-sm: 4px;
     right: 0;
     width: 45%;
     height: 100%;
-    background: $bg-card;
+    background: var(--bcs-bg-card);
     border-left: 2px solid $gold-dim;
     z-index: 20;
     display: flex;
@@ -1546,7 +1554,7 @@ $radius-sm: 4px;
   }
 
   .bcs-detail-title {
-    color: $gold;
+    color: var(--bcs-accent);
     font-size: 1rem;
     font-weight: 700;
     margin: 0;
@@ -1575,7 +1583,7 @@ $radius-sm: 4px;
     strong { color: $text-primary; }
     h1, h2, h3, h4 { color: $text-primary; margin-top: 10px; }
     ul, ol { padding-left: 18px; margin: 6px 0; }
-    a { color: $gold; }
+    a { color: var(--bcs-accent); }
   }
 
   // ===== EMPTY STATE =====
@@ -1587,13 +1595,169 @@ $radius-sm: 4px;
     font-size: 0.85rem;
   }
 
+  // ===== THEME PANEL =====
+  .bcs-theme-toggle {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    z-index: 15;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid $border-color;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $text-muted;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover {
+      color: var(--bcs-accent);
+      border-color: var(--bcs-accent-dim);
+      background: rgba(0, 0, 0, 0.7);
+    }
+  }
+
+  .bcs-theme-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 260px;
+    height: 100%;
+    background: var(--bcs-bg-card);
+    border-right: 2px solid var(--bcs-accent-dim);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: 4px 0 12px rgba(0, 0, 0, 0.5);
+
+    &[data-panel="open"] {
+      transform: translateX(0);
+    }
+  }
+
+  .bcs-theme-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid $border-color;
+    flex-shrink: 0;
+  }
+
+  .bcs-theme-title {
+    color: var(--bcs-accent);
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .bcs-theme-close {
+    background: transparent;
+    border: none;
+    color: $text-muted;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 4px;
+    &:hover { color: $text-primary; }
+  }
+
+  .bcs-theme-body {
+    padding: 16px;
+    flex: 1;
+  }
+
+  .bcs-theme-field {
+    margin-bottom: 18px;
+
+    label {
+      display: block;
+      color: $text-secondary;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+  }
+
+  .bcs-theme-input {
+    width: 100%;
+    height: 40px;
+    border: 1px solid $border-color;
+    border-radius: $radius;
+    cursor: pointer;
+    padding: 2px;
+    background: var(--bcs-bg-card-alt);
+
+    &::-webkit-color-swatch-wrapper { padding: 2px; }
+    &::-webkit-color-swatch { border-radius: 3px; border: none; }
+  }
+
+  .bcs-theme-select {
+    width: 100%;
+    height: 34px;
+    border: 1px solid $border-color;
+    border-radius: $radius;
+    background: var(--bcs-bg-card-alt);
+    color: $text-primary;
+    font-size: 0.82rem;
+    padding: 4px 8px;
+    cursor: pointer;
+    outline: none;
+
+    &:focus { border-color: var(--bcs-accent-dim); }
+
+    option {
+      background: $bg-card;
+      color: $text-primary;
+    }
+  }
+
+  .bcs-theme-actions {
+    margin-top: 24px;
+  }
+
+  .bcs-theme-reset {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid $border-color;
+    color: $text-secondary;
+    padding: 8px 12px;
+    border-radius: $radius;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.15s;
+
+    &:hover {
+      color: $text-primary;
+      border-color: var(--bcs-accent-dim);
+    }
+  }
+
   // ===== SHEET LAYOUT =====
   .bcs-sheet {
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: $bg-dark !important;
+    background: var(--bcs-bg-dark) !important;
     position: relative;
     z-index: 1;
   }
+
+  // Override any Foundry/dnd5e table header coloring
+  table th, table thead th, thead, table thead {
+    background: transparent !important;
+    background-color: transparent !important;
+    color: $text-secondary !important;
+    border-color: $border-color !important;
+  }
+
+  table thead tr {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
 }
+
