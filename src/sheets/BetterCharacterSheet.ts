@@ -285,11 +285,19 @@ export function createBetterCharacterSheet(): any {
             minute: `${i.system.activation?.value || ""} Minutes`,
             hour: `${i.system.activation?.value || ""} Hours`,
           };
+          const fullDesc = i.system.description?.value || "";
+          const textOnly = fullDesc.replace(/<[^>]*>/g, "").trim();
+          const truncated = textOnly.length > 80
+            ? textOnly.substring(0, 80) + "…"
+            : textOnly;
+
           return {
             id: i.id,
             name: i.name,
             img: i.img,
-            description: i.system.description?.value || "",
+            description: fullDesc,
+            truncatedDescription: truncated,
+            hasLongDescription: textOnly.length > 80,
             activationType,
             activationLabel: labelMap[actType] || "",
             uses,
@@ -299,9 +307,20 @@ export function createBetterCharacterSheet(): any {
         .filter((f: any) => f.activationType !== "other" || f.uses);
 
       // Categorize spells by activation type for the action tab sections
-      const spellItems = actor.items.filter(
+      const allSpellItems = actor.items.filter(
         (i: any) => i.type === "spell"
       );
+
+      // Filter to only prepared/always/cantrip spells
+      const isSpellAvailable = (s: any) => {
+        const lvl = s.system.level ?? 0;
+        if (lvl === 0) return true; // cantrips always available
+        const mode = s.system.preparation?.mode;
+        if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return true;
+        if (mode === "prepared") return !!s.system.preparation?.prepared;
+        return true; // non-prepared casters (e.g., sorcerer, bard) — all known spells available
+      };
+      const spellItems = allSpellItems.filter(isSpellAvailable);
       const spellsByActivation: Record<string, any[]> = {
         bonus: [], reaction: [], other: [], ritual: [],
       };
@@ -471,12 +490,21 @@ export function createBetterCharacterSheet(): any {
             pips.push({ filled: p < uses.value });
           }
         }
+        const fullDesc = i.system.description?.value || "";
+        // Strip HTML tags for truncation
+        const textOnly = fullDesc.replace(/<[^>]*>/g, "").trim();
+        const truncated = textOnly.length > 80
+          ? textOnly.substring(0, 80) + "…"
+          : textOnly;
+
         return {
           id: i.id,
           name: i.name,
           img: i.img,
           source: i.system.requirements || "",
-          description: i.system.description?.value || "",
+          description: fullDesc,
+          truncatedDescription: truncated,
+          hasLongDescription: textOnly.length > 80,
           uses,
           pips,
         };
@@ -722,6 +750,40 @@ export function createBetterCharacterSheet(): any {
             }
           });
         });
+      // Detail panel: click truncated text to show full description
+      const panel = this.element.querySelector(
+        ".bcs-detail-panel"
+      ) as HTMLElement;
+      const panelTitle = this.element.querySelector(
+        ".bcs-detail-title"
+      ) as HTMLElement;
+      const panelBody = this.element.querySelector(
+        ".bcs-detail-body"
+      ) as HTMLElement;
+      const panelClose = this.element.querySelector(".bcs-detail-close");
+
+      if (panel && panelTitle && panelBody) {
+        this.element
+          .querySelectorAll(
+            ".bcs-feature-desc-truncated, .bcs-action-feature-desc-truncated"
+          )
+          .forEach((el: Element) => {
+            el.addEventListener("click", () => {
+              const itemId = (el as HTMLElement).dataset.itemId;
+              const item = (this as any).document.items.get(itemId);
+              if (!item) return;
+              panelTitle.textContent = item.name;
+              panelBody.innerHTML =
+                item.system.description?.value || "";
+              panel.dataset.panel = "open";
+            });
+          });
+
+        panelClose?.addEventListener("click", () => {
+          panel.dataset.panel = "closed";
+        });
+      }
+
       // modules like ddb-importer (which discover sheet names from
       // CONFIG.Actor.sheetClasses and listen for render{SheetName}
       // with {owner, actor} data) can inject their buttons.

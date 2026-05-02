@@ -455,8 +455,10 @@ $radius-sm: 4px;
 
   .bcs-col-right {
     flex: 1;
-    overflow-y: auto;
+    overflow: hidden;
     background: $bg-dark;
+    display: flex;
+    flex-direction: column;
   }
 
   // ===== SIDEBAR =====
@@ -846,6 +848,7 @@ $radius-sm: 4px;
     flex: 1;
     overflow-y: auto;
     padding: 10px;
+    min-height: 0;
   }
 
   .bcs-tab-pane {
@@ -1109,20 +1112,23 @@ $radius-sm: 4px;
   }
 
   .bcs-slot-pip {
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-    line-height: 18px;
-    text-align: center;
-    font-size: 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
     border: 2px solid $gold;
-    border-radius: 3px;
-    color: $gold;
+    border-radius: 4px;
+    font-size: 14px;
     cursor: pointer;
+    color: transparent;
+    background: transparent;
 
     &.used {
-      border-color: $border-light;
-      color: transparent;
+      color: $gold;
+      background: rgba($gold, 0.15);
+
+      &::after { content: "✓"; }
     }
   }
 
@@ -1348,20 +1354,24 @@ $radius-sm: 4px;
   }
 
   .bcs-feat-pip {
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-    line-height: 18px;
-    text-align: center;
-    font-size: 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
     border: 2px solid $gold;
-    border-radius: 3px;
-    color: transparent;
+    border-radius: 4px;
+    font-size: 14px;
     cursor: pointer;
+    color: transparent;
+    background: transparent;
 
-    &.filled {
+    // filled = available (unchecked), not filled = used up (checked)
+    &:not(.filled) {
       color: $gold;
       background: rgba($gold, 0.15);
+
+      &::after { content: "✓"; }
     }
   }
 
@@ -1470,6 +1480,85 @@ $radius-sm: 4px;
     font-size: 0.85rem;
     &.success { color: $green; }
     &.failure { color: $red; }
+  }
+
+  // ===== TRUNCATED DESCRIPTIONS =====
+  .bcs-feature-desc-truncated,
+  .bcs-action-feature-desc-truncated {
+    color: $text-muted;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    cursor: pointer;
+    padding: 2px 0 2px 8px;
+    border-left: 2px solid $border-color;
+
+    &:hover {
+      color: $text-secondary;
+      border-left-color: $gold-dim;
+    }
+  }
+
+  // ===== SLIDE-OUT DETAIL PANEL =====
+  .bcs-detail-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 45%;
+    height: 100%;
+    background: $bg-card;
+    border-left: 2px solid $gold-dim;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.2s ease;
+    box-shadow: -4px 0 12px rgba(0,0,0,0.5);
+
+    &[data-panel="open"] {
+      transform: translateX(0);
+    }
+  }
+
+  .bcs-detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid $border-color;
+    flex-shrink: 0;
+  }
+
+  .bcs-detail-title {
+    color: $gold;
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .bcs-detail-close {
+    background: transparent;
+    border: none;
+    color: $text-muted;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 4px;
+
+    &:hover { color: $text-primary; }
+  }
+
+  .bcs-detail-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    color: $text-secondary;
+    font-size: 0.85rem;
+    line-height: 1.6;
+
+    p { margin: 6px 0; }
+    strong { color: $text-primary; }
+    h1, h2, h3, h4 { color: $text-primary; margin-top: 10px; }
+    ul, ol { padding-left: 18px; margin: 6px 0; }
+    a { color: $gold; }
   }
 
   // ===== EMPTY STATE =====

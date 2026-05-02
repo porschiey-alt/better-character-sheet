@@ -25,7 +25,7 @@
         <span class="bcs-feat-uses-label">Uses:</span>
         <span class="bcs-feat-pips">
           {{#each pips}}
-          <span class="bcs-feat-pip {{#if filled}}filled{{/if}}">■</span>
+          <span class="bcs-feat-pip {{#if filled}}filled{{/if}}"></span>
           {{/each}}
         </span>
         {{#if uses.per}}
@@ -33,8 +33,8 @@
         {{/if}}
       </div>
       {{/if}}
-      {{#if description}}
-      <div class="bcs-feature-desc">{{{description}}}</div>
+      {{#if truncatedDescription}}
+      <div class="bcs-feature-desc-truncated" data-item-id="{{id}}">{{truncatedDescription}}</div>
       {{/if}}
     </div>
     {{/each}}

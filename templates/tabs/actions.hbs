@@ -119,13 +119,13 @@
       <span class="bcs-action-feature-name">{{name}}</span>
       {{#if activationLabel}}<span class="bcs-action-feature-timing">({{activationLabel}})</span>{{/if}}
     </div>
-    {{#if description}}
-    <div class="bcs-action-feature-desc">{{{description}}}</div>
+    {{#if truncatedDescription}}
+    <div class="bcs-action-feature-desc-truncated" data-item-id="{{id}}">{{truncatedDescription}}</div>
     {{/if}}
     {{#if uses}}
     <div class="bcs-action-feature-uses">
       {{#each pips}}
-      <span class="bcs-feat-pip {{#if filled}}filled{{/if}}">■</span>
+      <span class="bcs-feat-pip {{#if filled}}filled{{/if}}"></span>
       {{/each}}
       <span class="bcs-feat-recovery">/ {{uses.per}}</span>
     </div>

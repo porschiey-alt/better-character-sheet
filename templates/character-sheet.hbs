@@ -53,11 +53,9 @@
             <span class="bcs-hp-current">{{system.attributes.hp.value}}</span>
             <span class="bcs-hp-sep">/</span>
             <span class="bcs-hp-max">{{system.attributes.hp.effectiveMax}}</span>
-            {{#if system.attributes.hp.temp}}
             <span class="bcs-hp-temp-sep">+</span>
             <span class="bcs-hp-temp">{{system.attributes.hp.temp}}</span>
             <span class="bcs-hp-temp-label">temp</span>
-            {{/if}}
           </div>
         </div>
       </div>
@@ -136,5 +134,14 @@
         </div>
       </div>
     </div>
+  </div>
+
+  {{!-- Slide-out detail panel --}}
+  <div class="bcs-detail-panel" data-panel="closed">
+    <div class="bcs-detail-header">
+      <h3 class="bcs-detail-title"></h3>
+      <button type="button" class="bcs-detail-close"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="bcs-detail-body"></div>
   </div>
 </section>
