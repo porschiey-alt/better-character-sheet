@@ -30,6 +30,8 @@ export function createBetterCharacterSheet(): any {
         actions: {
           shortRest: BetterCharacterSheet.#onShortRest,
           longRest: BetterCharacterSheet.#onLongRest,
+          heal: BetterCharacterSheet.#onHeal,
+          damage: BetterCharacterSheet.#onDamage,
         },
       },
       { inplace: false }
@@ -606,6 +608,28 @@ export function createBetterCharacterSheet(): any {
       this.document.longRest();
     }
 
+    static #onHeal(this: any) {
+      const input = this.element.querySelector(
+        ".bcs-hp-input"
+      ) as HTMLInputElement;
+      const val = parseInt(input?.value || "0", 10);
+      if (val > 0) {
+        this.document.applyDamage(-val);
+        if (input) input.value = "";
+      }
+    }
+
+    static #onDamage(this: any) {
+      const input = this.element.querySelector(
+        ".bcs-hp-input"
+      ) as HTMLInputElement;
+      const val = parseInt(input?.value || "0", 10);
+      if (val > 0) {
+        this.document.applyDamage(val);
+        if (input) input.value = "";
+      }
+    }
+
     /** @override */
     async _onRender(context: any, options: any) {
       // Skip dnd5e's _onRender (it expects DOM elements from its own templates).
@@ -751,6 +775,253 @@ export function createBetterCharacterSheet(): any {
             }
           });
         });
+      // ========================================
+      // PHASE 5: INTERACTIVITY
+      // ========================================
+      const actor = this.document;
+
+      // 1. Ability checks — click ability score block
+      this.element
+        .querySelectorAll(".bcs-ability[data-ability]")
+        .forEach((el: Element) => {
+          el.addEventListener("click", (e: Event) => {
+            const ability = (el as HTMLElement).dataset.ability;
+            if (ability) actor.rollAbilityCheck({ ability, event: e });
+          });
+        });
+
+      // 2. Saving throws — click save row
+      this.element
+        .querySelectorAll(".bcs-save-item[data-ability]")
+        .forEach((el: Element) => {
+          el.addEventListener("click", (e: Event) => {
+            const ability = (el as HTMLElement).dataset.ability;
+            if (ability) actor.rollSavingThrow({ ability, event: e });
+          });
+        });
+
+      // 3. Skill checks — click skill row
+      this.element
+        .querySelectorAll(".bcs-skill-item[data-skill]")
+        .forEach((el: Element) => {
+          el.addEventListener("click", (e: Event) => {
+            const skill = (el as HTMLElement).dataset.skill;
+            if (skill) actor.rollSkill({ skill, event: e });
+          });
+        });
+
+      // 4. Initiative — click initiative stat block
+      this.element
+        .querySelectorAll(".bcs-combat-init")
+        .forEach((el: Element) => {
+          el.addEventListener("click", (e: Event) => {
+            actor.rollInitiativeDialog({ event: e });
+          });
+          (el as HTMLElement).style.cursor = "pointer";
+        });
+
+      // 5. Death saves — click death save pips (in extras tab)
+      this.element
+        .querySelectorAll(".bcs-death-saves")
+        .forEach((el: Element) => {
+          el.addEventListener("click", (e: Event) => {
+            actor.rollDeathSave({ event: e, legacy: false });
+          });
+          (el as HTMLElement).style.cursor = "pointer";
+        });
+
+      // 6 & 7. Attack/spell rolls — click attack row or spell row to use the item
+      this.element
+        .querySelectorAll(
+          ".bcs-attack-row[data-item-id], .bcs-spell-row[data-item-id]"
+        )
+        .forEach((el: Element) => {
+          el.addEventListener("click", (e: Event) => {
+            const itemId = (el as HTMLElement).dataset.itemId;
+            const item = actor.items.get(itemId);
+            if (!item) return;
+            // Use the first activity, or fall back to item.use()
+            const activity = item.system.activities?.values()?.next()?.value;
+            if (activity) {
+              activity.use({ event: e, legacy: false });
+            } else {
+              item.use({ event: e, legacy: false });
+            }
+          });
+          (el as HTMLElement).style.cursor = "pointer";
+        });
+
+      // 8 & 9. Heal/Damage buttons
+      const hpInput = this.element.querySelector(
+        ".bcs-hp-input"
+      ) as HTMLInputElement;
+      this.element
+        .querySelectorAll(".bcs-heal-btn")
+        .forEach((el: Element) => {
+          el.addEventListener("click", () => {
+            const val = parseInt(hpInput?.value || "0", 10);
+            if (val > 0) {
+              actor.applyDamage(-val);
+              if (hpInput) hpInput.value = "";
+            }
+          });
+        });
+      this.element
+        .querySelectorAll(".bcs-damage-btn")
+        .forEach((el: Element) => {
+          el.addEventListener("click", () => {
+            const val = parseInt(hpInput?.value || "0", 10);
+            if (val > 0) {
+              actor.applyDamage(val);
+              if (hpInput) hpInput.value = "";
+            }
+          });
+        });
+
+      // 11. Inspiration toggle
+      this.element
+        .querySelectorAll(".bcs-inspiration")
+        .forEach((el: Element) => {
+          el.addEventListener("click", () => {
+            actor.update({
+              "system.attributes.inspiration":
+                !actor.system.attributes.inspiration,
+            });
+          });
+        });
+
+      // 12. Spell slot pips — click to toggle used/available
+      this.element
+        .querySelectorAll(".bcs-slot-pip")
+        .forEach((el: Element) => {
+          el.addEventListener("click", () => {
+            const section = el.closest(
+              ".bcs-spell-level-section"
+            ) as HTMLElement;
+            const level = section?.dataset.spellLevel;
+            if (!level) return;
+            const slotKey = `spell${level}` as string;
+            const currentSlots =
+              actor.system.spells?.[slotKey];
+            if (!currentSlots) return;
+            const isUsed = el.classList.contains("used");
+            const newVal = isUsed
+              ? Math.min(
+                  currentSlots.value + 1,
+                  currentSlots.max
+                )
+              : Math.max(currentSlots.value - 1, 0);
+            actor.update({
+              [`system.spells.${slotKey}.value`]: newVal,
+            });
+          });
+        });
+
+      // 13. Feature use pips — click to toggle used/available
+      this.element
+        .querySelectorAll(".bcs-feat-pip")
+        .forEach((el: Element) => {
+          el.addEventListener("click", () => {
+            const itemEl = el.closest(
+              "[data-item-id]"
+            ) as HTMLElement;
+            const itemId = itemEl?.dataset.itemId;
+            if (!itemId) return;
+            const item = actor.items.get(itemId);
+            if (!item?.system.uses?.max) return;
+            const isFilled = el.classList.contains("filled");
+            // filled = available, clicking it = consume one
+            // not filled = used up, clicking it = restore one
+            const newVal = isFilled
+              ? Math.max(
+                  (item.system.uses.value || 0) - 1,
+                  0
+                )
+              : Math.min(
+                  (item.system.uses.value || 0) + 1,
+                  item.system.uses.max
+                );
+            item.update({ "system.uses.value": newVal });
+          });
+        });
+
+      // Action tab spell references — click to cast
+      this.element
+        .querySelectorAll(".bcs-action-spell-ref[data-spell-name]")
+        .forEach((el: Element) => {
+          el.addEventListener("click", (e: Event) => {
+            const name = (el as HTMLElement).dataset.spellName;
+            const spell = actor.items.find(
+              (i: any) => i.type === "spell" && i.name === name
+            );
+            if (!spell) return;
+            const activity = spell.system.activities?.values()?.next()?.value;
+            if (activity) {
+              activity.use({ event: e, legacy: false });
+            } else {
+              spell.use({ event: e, legacy: false });
+            }
+          });
+        });
+
+      // Action features — click name to use, double-click to open sheet
+      this.element
+        .querySelectorAll(".bcs-action-feature[data-item-id]")
+        .forEach((el: Element) => {
+          const nameEl = el.querySelector(".bcs-action-feature-name");
+          if (nameEl) {
+            nameEl.addEventListener("click", (e: Event) => {
+              const itemId = (el as HTMLElement).dataset.itemId;
+              const item = actor.items.get(itemId);
+              if (!item) return;
+              const activity = item.system.activities?.values()?.next()?.value;
+              if (activity) {
+                activity.use({ event: e, legacy: false });
+              } else {
+                item.use({ event: e, legacy: false });
+              }
+            });
+            (nameEl as HTMLElement).style.cursor = "pointer";
+          }
+          el.addEventListener("dblclick", () => {
+            const itemId = (el as HTMLElement).dataset.itemId;
+            const item = actor.items.get(itemId);
+            if (item) item.sheet.render(true);
+          });
+        });
+
+      // 16. Click item/spell name — open item sheet
+      this.element
+        .querySelectorAll(
+          ".bcs-inv-row[data-item-id], .bcs-feature-item[data-item-id]"
+        )
+        .forEach((el: Element) => {
+          el.addEventListener("dblclick", () => {
+            const itemId = (el as HTMLElement).dataset.itemId;
+            const item = actor.items.get(itemId);
+            if (item) item.sheet.render(true);
+          });
+        });
+
+      // 18. Equipped toggle — click the equip checkbox
+      this.element
+        .querySelectorAll(".bcs-equip-check")
+        .forEach((el: Element) => {
+          el.addEventListener("click", (e: Event) => {
+            e.stopPropagation();
+            const row = el.closest("[data-item-id]") as HTMLElement;
+            const itemId = row?.dataset.itemId;
+            if (!itemId) return;
+            const item = actor.items.get(itemId);
+            if (item) {
+              item.update({
+                "system.equipped": !item.system.equipped,
+              });
+            }
+          });
+          (el as HTMLElement).style.cursor = "pointer";
+        });
+
       // Detail panel: click truncated text to show full description
       const panel = this.element.querySelector(
         ".bcs-detail-panel"

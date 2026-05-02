@@ -64,7 +64,7 @@
     <div class="bcs-action-spells-ref">
       <strong>Spells</strong>
       <div class="bcs-action-spells-list">
-        {{#each bonusSpells}}<span class="bcs-action-spell-ref"><em>{{name}}</em> ({{levelLabel}}){{#unless @last}}, {{/unless}}</span>{{/each}}
+        {{#each bonusSpells}}<span class="bcs-action-spell-ref" data-spell-name="{{name}}"><em>{{name}}</em> ({{levelLabel}}){{#unless @last}}, {{/unless}}</span>{{/each}}
       </div>
     </div>
     {{/if}}
@@ -81,7 +81,7 @@
     <div class="bcs-action-spells-ref">
       <strong>Spells</strong>
       <div class="bcs-action-spells-list">
-        {{#each reactionSpells}}<span class="bcs-action-spell-ref"><em>{{name}}</em> ({{levelLabel}}){{#unless @last}}, {{/unless}}</span>{{/each}}
+        {{#each reactionSpells}}<span class="bcs-action-spell-ref" data-spell-name="{{name}}"><em>{{name}}</em> ({{levelLabel}}){{#unless @last}}, {{/unless}}</span>{{/each}}
       </div>
     </div>
     {{/if}}
@@ -98,7 +98,7 @@
     <div class="bcs-action-spells-ref">
       <strong>Spells</strong>
       <div class="bcs-action-spells-list">
-        {{#each otherSpells}}<span class="bcs-action-spell-ref"><em>{{name}}</em> ({{levelLabel}}){{#unless @last}}, {{/unless}}</span>{{/each}}
+        {{#each otherSpells}}<span class="bcs-action-spell-ref" data-spell-name="{{name}}"><em>{{name}}</em> ({{levelLabel}}){{#unless @last}}, {{/unless}}</span>{{/each}}
       </div>
     </div>
     {{/if}}
@@ -106,7 +106,7 @@
     <div class="bcs-action-spells-ref">
       <strong>Ritual Spells</strong>
       <div class="bcs-action-spells-list">
-        {{#each ritualSpells}}<span class="bcs-action-spell-ref"><em>{{name}}</em> ({{levelLabel}}){{#unless @last}}, {{/unless}}</span>{{/each}}
+        {{#each ritualSpells}}<span class="bcs-action-spell-ref" data-spell-name="{{name}}"><em>{{name}}</em> ({{levelLabel}}){{#unless @last}}, {{/unless}}</span>{{/each}}
       </div>
     </div>
     {{/if}}
@@ -114,7 +114,7 @@
 
   {{!-- Features across all activation types --}}
   {{#each actionFeatures}}
-  <div class="bcs-action-feature" data-action-type="{{activationType}}" data-limited="{{#if uses}}true{{/if}}">
+  <div class="bcs-action-feature" data-item-id="{{id}}" data-action-type="{{activationType}}" data-limited="{{#if uses}}true{{/if}}">
     <div class="bcs-action-feature-header">
       <span class="bcs-action-feature-name">{{name}}</span>
       {{#if activationLabel}}<span class="bcs-action-feature-timing">({{activationLabel}})</span>{{/if}}

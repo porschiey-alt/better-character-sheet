@@ -151,9 +151,9 @@ $radius-sm: 4px;
   }
 
   .bcs-rest-btn {
-    background: #4a5060 !important;
-    border: 1px solid #666 !important;
-    color: #e0e0e0 !important;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid $border-color;
+    color: $text-secondary;
     padding: 6px 12px;
     border-radius: $radius;
     cursor: pointer;
@@ -600,6 +600,7 @@ $radius-sm: 4px;
     flex: 1;
     color: $text-secondary;
     font-size: 0.8rem;
+    cursor: pointer;
   }
 
   .bcs-save-mod {
@@ -749,6 +750,16 @@ $radius-sm: 4px;
     overflow: hidden;
     min-width: 70px;
   }
+
+  .bcs-combat-init {
+    cursor: pointer;
+    &:hover { border-color: $gold-dim; }
+  }
+
+  .bcs-spell-row { cursor: pointer; }
+  .bcs-attack-row { cursor: pointer; }
+  .bcs-inv-row { cursor: pointer; }
+  .bcs-feature-item { cursor: pointer; }
 
   .bcs-combat-card-bg {
     position: absolute;
@@ -979,6 +990,9 @@ $radius-sm: 4px;
     font-weight: 700;
     color: $text-primary;
     font-size: 0.9rem;
+    cursor: pointer;
+
+    &:hover { color: $gold; }
   }
 
   .bcs-action-feature-desc {
@@ -1046,8 +1060,14 @@ $radius-sm: 4px;
     line-height: 1.6;
   }
 
+  .bcs-action-spell-ref {
+    cursor: pointer;
+    &:hover em { color: $gold; }
+  }
+
   .bcs-action-spell-ref em {
     color: $text-primary;
+    transition: color 0.15s;
   }
 
   // ===== SPELLS TAB =====
