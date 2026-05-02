@@ -1,61 +1,67 @@
 /**
- * Fetches the DnD Beyond backdrop (background) image for a character
- * by reading the DDB character ID from ddb-importer's actor flags
- * and calling the public DDB character API.
+ * Fetches the DnD Beyond backdrop (background) image URL for a character.
+ *
+ * Strategy:
+ *  1. Read from our own cached flag (flags.better-character-sheet.backdropUrl)
+ *  2. On ddb-importer character import/update, hook into
+ *     "ddb-importer.characterProcessDataComplete" to capture the backdrop URL
+ *     from the raw DDB data and persist it in our flag — no external fetch needed.
  */
 
-const DDB_CHARACTER_API =
-  "https://character-service.dndbeyond.com/character/v5/character";
-
-/** Module-level cache so we only fetch once per character per session. */
-const backdropCache = new Map<string, string | null>();
+const MODULE_ID = "better-character-sheet";
 
 /**
- * Attempt to retrieve the DnD Beyond backdrop image URL for the given actor.
- * Returns `null` if the actor was not imported via ddb-importer or the fetch fails.
+ * Return the stored DnD Beyond backdrop URL for the given actor, or null.
  */
-export async function fetchDDBBackdrop(
-  actor: any
-): Promise<string | null> {
-  const ddbFlags = actor.flags?.ddbimporter?.dndbeyond;
-  if (!ddbFlags) return null;
-
-  const characterId =
-    ddbFlags.characterId ??
-    extractIdFromUrl(ddbFlags.roUrl) ??
-    extractIdFromUrl(ddbFlags.url);
-  if (!characterId) return null;
-
-  const cacheKey = String(characterId);
-  if (backdropCache.has(cacheKey)) return backdropCache.get(cacheKey) ?? null;
-
-  try {
-    const res = await fetch(`${DDB_CHARACTER_API}/${cacheKey}`);
-    if (!res.ok) {
-      backdropCache.set(cacheKey, null);
-      return null;
-    }
-
-    const json = await res.json();
-    const dec = json?.data?.decorations;
-    const url =
-      dec?.largeBackdropAvatarUrl ??
-      dec?.backdropAvatarUrl ??
-      dec?.defaultBackdrop?.largeBackdropAvatarUrl ??
-      dec?.defaultBackdrop?.backdropAvatarUrl ??
-      null;
-
-    backdropCache.set(cacheKey, url);
-    return url;
-  } catch (err) {
-    console.warn("better-character-sheet | Failed to fetch DDB backdrop", err);
-    backdropCache.set(cacheKey, null);
-    return null;
-  }
+export function getDDBBackdropUrl(actor: any): string | null {
+  return actor.flags?.[MODULE_ID]?.backdropUrl ?? null;
 }
 
-function extractIdFromUrl(url: string | undefined | null): string | null {
-  if (!url) return null;
-  const match = url.match(/characters\/(\d+)/);
-  return match ? match[1] : null;
+/**
+ * Extract the best backdrop URL from a DDB decorations object.
+ */
+function pickBackdropUrl(decorations: any): string | null {
+  if (!decorations) return null;
+  return (
+    decorations.largeBackdropAvatarUrl ??
+    decorations.backdropAvatarUrl ??
+    decorations.defaultBackdrop?.largeBackdropAvatarUrl ??
+    decorations.defaultBackdrop?.backdropAvatarUrl ??
+    null
+  );
+}
+
+/**
+ * Register a hook that listens for ddb-importer's character import/update
+ * and persists the backdrop URL into our own actor flag.
+ * Call this once at module init.
+ */
+export function registerDDBBackdropHook(): void {
+  Hooks.on(
+    "ddb-importer.characterProcessDataComplete",
+    async ({ actor, ddbCharacter }: { actor: any; ddbCharacter: any }) => {
+      try {
+        const decorations =
+          ddbCharacter?.source?.ddb?.character?.decorations ??
+          ddbCharacter?.source?.ddb?.decorations;
+        const url = pickBackdropUrl(decorations);
+
+        // Only update if the value actually changed
+        const current = actor.flags?.[MODULE_ID]?.backdropUrl ?? null;
+        if (url !== current) {
+          await actor.update({
+            [`flags.${MODULE_ID}.backdropUrl`]: url,
+          });
+          console.log(
+            `better-character-sheet | ${url ? "Saved" : "Cleared"} DDB backdrop for ${actor.name}`
+          );
+        }
+      } catch (err) {
+        console.warn(
+          "better-character-sheet | Failed to extract DDB backdrop from import data",
+          err
+        );
+      }
+    }
+  );
 }

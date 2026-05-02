@@ -1,4 +1,5 @@
 import { createBetterCharacterSheet } from "./sheets/BetterCharacterSheet.ts";
+import { registerDDBBackdropHook } from "./helpers/ddb-backdrop.ts";
 
 const MODULE_ID = "better-character-sheet";
 const TEMPLATES_PATH = `modules/${MODULE_ID}/templates`;
@@ -32,6 +33,9 @@ Hooks.once("init", () => {
     `${TEMPLATES_PATH}/tabs/notes.hbs`,
     `${TEMPLATES_PATH}/tabs/extras.hbs`,
   ]);
+
+  // Listen for ddb-importer character imports to capture backdrop images
+  registerDDBBackdropHook();
 
   console.log("better-character-sheet | Sheet registered");
 });

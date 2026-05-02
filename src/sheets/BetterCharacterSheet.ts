@@ -1,4 +1,4 @@
-import { fetchDDBBackdrop } from "../helpers/ddb-backdrop.ts";
+import { getDDBBackdropUrl } from "../helpers/ddb-backdrop.ts";
 
 /**
  * BetterCharacterSheet — extends the dnd5e CharacterActorSheet,
@@ -51,8 +51,8 @@ export function createBetterCharacterSheet(): any {
       const system = context.system;
       const actor = context.actor;
 
-      // DnD Beyond backdrop image (via ddb-importer flags)
-      const backdropUrl = await fetchDDBBackdrop(this.document);
+      // DnD Beyond backdrop image (stored by our ddb-importer hook)
+      const backdropUrl = getDDBBackdropUrl(this.document);
 
       // Build ability scores for the horizontal row
       const abilityKeys = ["str", "dex", "con", "int", "wis", "cha"] as const;
