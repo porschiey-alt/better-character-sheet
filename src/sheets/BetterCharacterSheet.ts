@@ -32,6 +32,7 @@ export function createBetterCharacterSheet(): any {
           longRest: BetterCharacterSheet.#onLongRest,
           heal: BetterCharacterSheet.#onHeal,
           damage: BetterCharacterSheet.#onDamage,
+          toggleClassicSheet: BetterCharacterSheet.#onToggleClassicSheet,
         },
       },
       { inplace: false }
@@ -628,6 +629,28 @@ export function createBetterCharacterSheet(): any {
         this.document.applyDamage(val);
         if (input) input.value = "";
       }
+    }
+
+    static #onToggleClassicSheet(this: any) {
+      const actor = this.document;
+      // Close our sheet
+      this.close();
+      // Switch to the default dnd5e CharacterActorSheet
+      actor.setFlag("core", "sheetClass", "dnd5e.CharacterActorSheet");
+      // Re-render with the classic sheet
+      setTimeout(() => actor.sheet.render(true), 100);
+    }
+
+    /** @override */
+    _getHeaderControls() {
+      const controls = super._getHeaderControls();
+      controls.unshift({
+        icon: "fas fa-exchange-alt",
+        label: "Classic View",
+        action: "toggleClassicSheet",
+        ownership: "OWNER",
+      });
+      return controls;
     }
 
     /** @override */

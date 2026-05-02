@@ -37,5 +37,23 @@ Hooks.once("init", () => {
   // Listen for ddb-importer character imports to capture backdrop images
   registerDDBBackdropHook();
 
+  // Add "Better Sheet" button to the default CharacterActorSheet header
+  // so users can switch back from classic view
+  Hooks.on("getHeaderControlsCharacterActorSheet", (config: any, controls: any[]) => {
+    if (!config.document?.isOwner) return;
+    controls.unshift({
+      icon: "fas fa-exchange-alt",
+      label: "Better Sheet",
+      action: "switchToBetterSheet",
+      ownership: "OWNER",
+    });
+    config.options.actions["switchToBetterSheet"] = function (this: any) {
+      const actor = this.document;
+      this.close();
+      actor.setFlag("core", "sheetClass", `${MODULE_ID}.BetterCharacterSheet`);
+      setTimeout(() => actor.sheet.render(true), 100);
+    };
+  });
+
   console.log("better-character-sheet | Sheet registered");
 });
