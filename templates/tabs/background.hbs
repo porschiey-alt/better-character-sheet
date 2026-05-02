@@ -1,0 +1,23 @@
+{{!-- Background Tab: Personality, Ideals, Bonds, Flaws, Backstory --}}
+<div class="bcs-background">
+  <div class="bcs-bio-section">
+    <h4 class="bcs-bio-label">Personality Traits</h4>
+    <div class="bcs-bio-text">{{system.details.trait}}</div>
+  </div>
+  <div class="bcs-bio-section">
+    <h4 class="bcs-bio-label">Ideals</h4>
+    <div class="bcs-bio-text">{{system.details.ideal}}</div>
+  </div>
+  <div class="bcs-bio-section">
+    <h4 class="bcs-bio-label">Bonds</h4>
+    <div class="bcs-bio-text">{{system.details.bond}}</div>
+  </div>
+  <div class="bcs-bio-section">
+    <h4 class="bcs-bio-label">Flaws</h4>
+    <div class="bcs-bio-text">{{system.details.flaw}}</div>
+  </div>
+  <div class="bcs-bio-section bcs-bio-backstory">
+    <h4 class="bcs-bio-label">Backstory</h4>
+    <div class="bcs-bio-text bcs-bio-rich">{{{system.details.biography.value}}}</div>
+  </div>
+</div>

@@ -1,0 +1,35 @@
+{{!-- Stats Bar: Proficiency, Speed, Inspiration, HP --}}
+<div class="bcs-stats-bar">
+  <div class="bcs-stat-block">
+    <div class="bcs-stat-value">{{ dnd5e-numberFormat system.attributes.prof signDisplay="always" }}</div>
+    <div class="bcs-stat-label">Proficiency</div>
+  </div>
+
+  <div class="bcs-stat-block">
+    <div class="bcs-stat-value">{{system.attributes.movement.walk}} ft</div>
+    <div class="bcs-stat-label">Walking Speed</div>
+  </div>
+
+  <div class="bcs-stat-block bcs-inspiration {{#if system.attributes.inspiration}}active{{/if}}"
+    data-action="toggleInspiration">
+    <div class="bcs-stat-value">
+      <i class="{{#if system.attributes.inspiration}}fas{{else}}far{{/if}} fa-sun"></i>
+    </div>
+    <div class="bcs-stat-label">Inspiration</div>
+  </div>
+
+  <div class="bcs-stat-block bcs-hp-block">
+    <div class="bcs-hp-bar">
+      <div class="bcs-hp-fill" style="width: {{system.attributes.hp.pct}}%"></div>
+      <div class="bcs-hp-text">
+        <span class="bcs-hp-current">{{system.attributes.hp.value}}</span>
+        <span class="bcs-hp-sep">/</span>
+        <span class="bcs-hp-max">{{system.attributes.hp.effectiveMax}}</span>
+        {{#if system.attributes.hp.temp}}
+          <span class="bcs-hp-temp">+{{system.attributes.hp.temp}} temp</span>
+        {{/if}}
+      </div>
+    </div>
+    <div class="bcs-stat-label">Hit Points</div>
+  </div>
+</div>

@@ -1,0 +1,48 @@
+{{!-- Features & Traits Tab: DnDBeyond-style with descriptions --}}
+<div class="bcs-features">
+  {{!-- Filter pills --}}
+  <div class="bcs-feat-filters">
+    <button class="bcs-filter-pill active" data-feat-filter="all">ALL</button>
+    <button class="bcs-filter-pill" data-feat-filter="class">CLASS FEATURES</button>
+    <button class="bcs-filter-pill" data-feat-filter="race">SPECIES TRAITS</button>
+    <button class="bcs-filter-pill" data-feat-filter="feat">FEATS</button>
+  </div>
+
+  {{#each featureGroups}}
+  {{#if items.length}}
+  <div class="bcs-feature-group" data-feat-type="{{type}}">
+    <h4 class="bcs-feature-group-title">{{label}}</h4>
+    {{#each items}}
+    <div class="bcs-feature-item" data-item-id="{{id}}">
+      <div class="bcs-feature-header">
+        <span class="bcs-feature-name">{{name}}</span>
+        {{#if source}}
+          <span class="bcs-feature-source">• {{source}}</span>
+        {{/if}}
+      </div>
+      {{#if uses}}
+      <div class="bcs-feature-uses-bar">
+        <span class="bcs-feat-uses-label">Uses:</span>
+        <span class="bcs-feat-pips">
+          {{#each pips}}
+          <span class="bcs-feat-pip {{#if filled}}filled{{/if}}">■</span>
+          {{/each}}
+        </span>
+        {{#if uses.per}}
+        <span class="bcs-feat-recovery">/ {{uses.per}}</span>
+        {{/if}}
+      </div>
+      {{/if}}
+      {{#if description}}
+      <div class="bcs-feature-desc">{{{description}}}</div>
+      {{/if}}
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
+  {{/each}}
+
+  {{#unless hasFeatures}}
+  <div class="bcs-empty-state">No features or traits</div>
+  {{/unless}}
+</div>

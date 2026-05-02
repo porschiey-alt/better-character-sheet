@@ -1,0 +1,10 @@
+{{!-- Notes Tab: Freeform notes --}}
+<div class="bcs-notes">
+  <div class="bcs-bio-section bcs-bio-backstory">
+    <h4 class="bcs-bio-label">Notes</h4>
+    <div class="bcs-bio-text bcs-bio-rich">{{{system.details.biography.public}}}</div>
+  </div>
+  {{#unless system.details.biography.public}}
+  <div class="bcs-empty-state">No notes yet</div>
+  {{/unless}}
+</div>

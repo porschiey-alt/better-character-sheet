@@ -1,0 +1,140 @@
+<section class="bcs-sheet">
+  {{!-- Top Section: Header --}}
+  {{> "modules/better-character-sheet/templates/parts/header.hbs"}}
+
+  {{!-- Combined Ability Scores + Stats Row --}}
+  <div class="bcs-combined-row">
+    {{!-- Left: Ability Scores --}}
+    <div class="bcs-row-left">
+      {{#each abilities}}
+      <div class="bcs-ability" data-ability="{{key}}">
+        <div class="bcs-ability-label">{{abbr}}</div>
+        <div class="bcs-ability-mod">{{ dnd5e-formatModifier mod }}</div>
+        <div class="bcs-ability-score">{{value}}</div>
+      </div>
+      {{/each}}
+    </div>
+
+    {{!-- Right: Prof, Speed, Inspiration + HP --}}
+    <div class="bcs-row-right">
+      <div class="bcs-stat-block">
+        <div class="bcs-stat-value">{{ dnd5e-numberFormat system.attributes.prof signDisplay="always" }}</div>
+        <div class="bcs-stat-sublabel">Prof</div>
+      </div>
+
+      <div class="bcs-stat-block">
+        <div class="bcs-stat-value">{{system.attributes.movement.walk}}</div>
+        <div class="bcs-stat-sublabel">Speed</div>
+      </div>
+
+      <div class="bcs-stat-block bcs-inspiration {{#if system.attributes.inspiration}}active{{/if}}"
+        data-action="toggleInspiration">
+        <i class="fas fa-star bcs-stat-bg-icon"></i>
+        <div class="bcs-stat-value">
+          <i class="{{#if system.attributes.inspiration}}fas{{else}}far{{/if}} fa-star"></i>
+        </div>
+        <div class="bcs-stat-sublabel">Heroic</div>
+      </div>
+
+      {{!-- HP Block: [Input] [Heal/Dmg buttons] [HP readout] --}}
+      <div class="bcs-hp-block">
+        <input type="number" class="bcs-hp-input" placeholder="0" data-hp-amount />
+        <div class="bcs-hp-buttons">
+          <button type="button" class="bcs-hp-btn bcs-heal-btn" data-action="heal">
+            <i class="fas fa-heart"></i> Heal
+          </button>
+          <button type="button" class="bcs-hp-btn bcs-damage-btn" data-action="damage">
+            <i class="fas fa-minus-circle"></i> Dmg
+          </button>
+        </div>
+        <div class="bcs-hp-info">
+          <div class="bcs-hp-label-top">Hit Points</div>
+          <div class="bcs-hp-numbers">
+            <span class="bcs-hp-current">{{system.attributes.hp.value}}</span>
+            <span class="bcs-hp-sep">/</span>
+            <span class="bcs-hp-max">{{system.attributes.hp.effectiveMax}}</span>
+            {{#if system.attributes.hp.temp}}
+            <span class="bcs-hp-temp-sep">+</span>
+            <span class="bcs-hp-temp">{{system.attributes.hp.temp}}</span>
+            <span class="bcs-hp-temp-label">temp</span>
+            {{/if}}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{!-- Main 3-Column Layout --}}
+  <div class="bcs-main">
+    {{!-- Left Column: Saves, Passives, Senses, Proficiencies --}}
+    <div class="bcs-col-left">
+      {{> "modules/better-character-sheet/templates/parts/sidebar.hbs"}}
+    </div>
+
+    {{!-- Middle Column: Skills --}}
+    <div class="bcs-col-mid">
+      {{> "modules/better-character-sheet/templates/parts/skills.hbs"}}
+    </div>
+
+    {{!-- Right Column: Combat cards + Tabbed Content --}}
+    <div class="bcs-col-right">
+      {{!-- Combat row: AC, Initiative, Defenses/Conditions --}}
+      <div class="bcs-combat-row">
+        <div class="bcs-combat-card bcs-combat-ac">
+          <i class="fas fa-shield-alt bcs-combat-card-bg"></i>
+          <div class="bcs-combat-card-value">{{system.attributes.ac.value}}</div>
+          <div class="bcs-combat-card-label">Armor Class</div>
+        </div>
+
+        <div class="bcs-combat-card bcs-combat-init">
+          <div class="bcs-combat-card-value">{{ dnd5e-numberFormat system.attributes.init.total signDisplay="always" }}</div>
+          <div class="bcs-combat-card-label">Initiative</div>
+        </div>
+
+        <div class="bcs-combat-card bcs-combat-defenses">
+          <div class="bcs-combat-card-label">Defenses &amp; Conditions</div>
+          <div class="bcs-defense-tags">
+            {{#each resistances}}<span class="bcs-defense-tag resist">Resist {{this}}</span>{{/each}}
+            {{#each immunities}}<span class="bcs-defense-tag immune">Immune {{this}}</span>{{/each}}
+            {{#each conditionImmunities}}<span class="bcs-defense-tag cond-immune">{{this}} Immune</span>{{/each}}
+            {{#each conditions}}<span class="bcs-defense-tag condition">{{this}}</span>{{/each}}
+            {{#unless hasDefenses}}<span class="bcs-defense-none">None</span>{{/unless}}
+          </div>
+        </div>
+      </div>
+
+      <nav class="bcs-tab-nav">
+        <button class="bcs-tab-btn active" data-bcs-tab="actions">Actions</button>
+        <button class="bcs-tab-btn" data-bcs-tab="spells">Spells</button>
+        <button class="bcs-tab-btn" data-bcs-tab="inventory">Inventory</button>
+        <button class="bcs-tab-btn" data-bcs-tab="features">Features</button>
+        <button class="bcs-tab-btn" data-bcs-tab="background">Background</button>
+        <button class="bcs-tab-btn" data-bcs-tab="notes">Notes</button>
+        <button class="bcs-tab-btn" data-bcs-tab="extras">Extras</button>
+      </nav>
+      <div class="bcs-tab-content">
+        <div class="bcs-tab-pane active" data-bcs-tab-pane="actions">
+          {{> "modules/better-character-sheet/templates/tabs/actions.hbs"}}
+        </div>
+        <div class="bcs-tab-pane" data-bcs-tab-pane="spells">
+          {{> "modules/better-character-sheet/templates/tabs/spells.hbs"}}
+        </div>
+        <div class="bcs-tab-pane" data-bcs-tab-pane="inventory">
+          {{> "modules/better-character-sheet/templates/tabs/inventory.hbs"}}
+        </div>
+        <div class="bcs-tab-pane" data-bcs-tab-pane="features">
+          {{> "modules/better-character-sheet/templates/tabs/features.hbs"}}
+        </div>
+        <div class="bcs-tab-pane" data-bcs-tab-pane="background">
+          {{> "modules/better-character-sheet/templates/tabs/background.hbs"}}
+        </div>
+        <div class="bcs-tab-pane" data-bcs-tab-pane="notes">
+          {{> "modules/better-character-sheet/templates/tabs/notes.hbs"}}
+        </div>
+        <div class="bcs-tab-pane" data-bcs-tab-pane="extras">
+          {{> "modules/better-character-sheet/templates/tabs/extras.hbs"}}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

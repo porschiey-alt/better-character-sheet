@@ -1,0 +1,18 @@
+{{!-- Skills Panel: Full 18-skill list --}}
+<div class="bcs-skills">
+  <h3 class="bcs-section-title">Skills</h3>
+  <ul class="bcs-skill-list">
+    {{#each skills}}
+    <li class="bcs-skill-item" data-skill="{{key}}">
+      <span class="bcs-prof-dot
+        {{#if (eq value 2)}}expert{{/if}}
+        {{#if (eq value 1)}}proficient{{/if}}
+        {{#if (eq value 0.5)}}half{{/if}}
+      "></span>
+      <span class="bcs-skill-ability">{{abbreviation}}</span>
+      <span class="bcs-skill-name">{{label}}</span>
+      <span class="bcs-skill-mod">{{ dnd5e-formatModifier total }}</span>
+    </li>
+    {{/each}}
+  </ul>
+</div>

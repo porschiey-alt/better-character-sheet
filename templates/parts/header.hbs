@@ -1,0 +1,25 @@
+{{!-- Header: Portrait, Name, Class/Race, Rest Buttons --}}
+<header class="bcs-header">
+  <div class="bcs-portrait">
+    <img src="{{portrait.src}}" alt="{{actor.name}}" />
+  </div>
+
+  <div class="bcs-identity">
+    <div class="bcs-name-row">
+      <input type="text" name="name" value="{{actor.name}}" placeholder="Character Name"
+        {{#unless editable}}disabled{{/unless}} />
+    </div>
+    <div class="bcs-subtitle">
+      {{#if species}}{{species.name}} &middot; {{/if}}{{labels.class}}
+    </div>
+  </div>
+
+  <div class="bcs-header-actions">
+    <button type="button" class="bcs-rest-btn" data-action="shortRest">
+      <i class="fas fa-campground"></i> Short Rest
+    </button>
+    <button type="button" class="bcs-rest-btn" data-action="longRest">
+      <i class="fas fa-bed"></i> Long Rest
+    </button>
+  </div>
+</header>

@@ -1,0 +1,135 @@
+{{!-- Actions Tab: DnDBeyond-style with per-type sections --}}
+<div class="bcs-actions">
+  {{!-- Sub-filter pills --}}
+  <div class="bcs-action-filters">
+    <button class="bcs-filter-pill active" data-action-filter="all">ALL</button>
+    <button class="bcs-filter-pill" data-action-filter="attack">ATTACK</button>
+    <button class="bcs-filter-pill" data-action-filter="action">ACTION</button>
+    <button class="bcs-filter-pill" data-action-filter="bonus">BONUS ACTION</button>
+    <button class="bcs-filter-pill" data-action-filter="reaction">REACTION</button>
+    <button class="bcs-filter-pill" data-action-filter="other">OTHER</button>
+    <button class="bcs-filter-pill" data-action-filter="limited">LIMITED USE</button>
+  </div>
+
+  {{!-- ATTACK section --}}
+  <div class="bcs-action-section" data-action-type="attack">
+    <div class="bcs-action-section-header">ACTIONS</div>
+    {{#if attacks.length}}
+    <table class="bcs-attack-table">
+      <thead>
+        <tr>
+          <th class="col-name">Attack</th>
+          <th class="col-range">Range</th>
+          <th class="col-hit">Hit / DC</th>
+          <th class="col-damage">Damage</th>
+          <th class="col-notes">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each attacks}}
+        <tr class="bcs-attack-row" data-item-id="{{id}}">
+          <td class="col-name">
+            <div class="bcs-attack-name-cell">
+              <img src="{{img}}" alt="" class="bcs-item-icon" />
+              <div>
+                <span class="bcs-attack-name">{{name}}</span>
+                <span class="bcs-attack-source">{{source}}</span>
+              </div>
+            </div>
+          </td>
+          <td class="col-range">{{range}}</td>
+          <td class="col-hit">{{toHit}}</td>
+          <td class="col-damage">{{damage}}</td>
+          <td class="col-notes">{{notes}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{/if}}
+
+    <div class="bcs-combat-ref">
+      <strong>Actions in Combat</strong>
+      <div class="bcs-combat-ref-list">Attack, Dash, Disengage, Dodge, Grapple, Help, Hide, Improvise, Influence, Magic, Ready, Search, Shove, Study, Utilize</div>
+    </div>
+  </div>
+
+  {{!-- BONUS ACTION section --}}
+  <div class="bcs-action-section" data-action-type="bonus">
+    <div class="bcs-action-section-header">BONUS ACTIONS</div>
+    <div class="bcs-combat-ref">
+      <strong>Actions in Combat</strong>
+      <div class="bcs-combat-ref-list">Two-Weapon Fighting</div>
+    </div>
+    {{#if bonusSpells.length}}
+    <div class="bcs-action-spells-ref">
+      <strong>Spells</strong>
+      <div class="bcs-action-spells-list">
+        {{#each bonusSpells}}<span class="bcs-action-spell-ref"><em>{{name}}</em> ({{levelLabel}}){{#unless @last}}, {{/unless}}</span>{{/each}}
+      </div>
+    </div>
+    {{/if}}
+  </div>
+
+  {{!-- REACTION section --}}
+  <div class="bcs-action-section" data-action-type="reaction">
+    <div class="bcs-action-section-header">REACTIONS</div>
+    <div class="bcs-combat-ref">
+      <strong>Actions in Combat</strong>
+      <div class="bcs-combat-ref-list">Opportunity Attack</div>
+    </div>
+    {{#if reactionSpells.length}}
+    <div class="bcs-action-spells-ref">
+      <strong>Spells</strong>
+      <div class="bcs-action-spells-list">
+        {{#each reactionSpells}}<span class="bcs-action-spell-ref"><em>{{name}}</em> ({{levelLabel}}){{#unless @last}}, {{/unless}}</span>{{/each}}
+      </div>
+    </div>
+    {{/if}}
+  </div>
+
+  {{!-- OTHER section --}}
+  <div class="bcs-action-section" data-action-type="other">
+    <div class="bcs-action-section-header">OTHER</div>
+    <div class="bcs-combat-ref">
+      <strong>Actions in Combat</strong>
+      <div class="bcs-combat-ref-list">Interact with an Object</div>
+    </div>
+    {{#if otherSpells.length}}
+    <div class="bcs-action-spells-ref">
+      <strong>Spells</strong>
+      <div class="bcs-action-spells-list">
+        {{#each otherSpells}}<span class="bcs-action-spell-ref"><em>{{name}}</em> ({{levelLabel}}){{#unless @last}}, {{/unless}}</span>{{/each}}
+      </div>
+    </div>
+    {{/if}}
+    {{#if ritualSpells.length}}
+    <div class="bcs-action-spells-ref">
+      <strong>Ritual Spells</strong>
+      <div class="bcs-action-spells-list">
+        {{#each ritualSpells}}<span class="bcs-action-spell-ref"><em>{{name}}</em> ({{levelLabel}}){{#unless @last}}, {{/unless}}</span>{{/each}}
+      </div>
+    </div>
+    {{/if}}
+  </div>
+
+  {{!-- Features across all activation types --}}
+  {{#each actionFeatures}}
+  <div class="bcs-action-feature" data-action-type="{{activationType}}" data-limited="{{#if uses}}true{{/if}}">
+    <div class="bcs-action-feature-header">
+      <span class="bcs-action-feature-name">{{name}}</span>
+      {{#if activationLabel}}<span class="bcs-action-feature-timing">({{activationLabel}})</span>{{/if}}
+    </div>
+    {{#if description}}
+    <div class="bcs-action-feature-desc">{{{description}}}</div>
+    {{/if}}
+    {{#if uses}}
+    <div class="bcs-action-feature-uses">
+      {{#each pips}}
+      <span class="bcs-feat-pip {{#if filled}}filled{{/if}}">■</span>
+      {{/each}}
+      <span class="bcs-feat-recovery">/ {{uses.per}}</span>
+    </div>
+    {{/if}}
+  </div>
+  {{/each}}
+</div>

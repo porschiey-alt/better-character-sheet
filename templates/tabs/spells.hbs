@@ -1,0 +1,94 @@
+{{!-- Spells Tab: DnDBeyond-style table layout --}}
+<div class="bcs-spells">
+  {{!-- Spellcasting stats bar --}}
+  {{#if spellcasting}}
+  <div class="bcs-spell-stats">
+    {{#each spellcasting}}
+    <div class="bcs-spell-stat">
+      <span class="bcs-spell-stat-val">{{ dnd5e-formatModifier ../system.abilities.wis.mod }}</span>
+      <span class="bcs-spell-stat-lbl">Modifier</span>
+    </div>
+    <div class="bcs-spell-stat">
+      <span class="bcs-spell-stat-val">{{ dnd5e-formatModifier attack }}</span>
+      <span class="bcs-spell-stat-lbl">Spell Attack</span>
+    </div>
+    <div class="bcs-spell-stat">
+      <span class="bcs-spell-stat-val">{{dc}}</span>
+      <span class="bcs-spell-stat-lbl">Save DC</span>
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
+
+  {{!-- Level filter pills --}}
+  <div class="bcs-spell-filters">
+    <button class="bcs-filter-pill active" data-spell-filter="all">ALL</button>
+    {{#each spellsByLevel}}
+    <button class="bcs-filter-pill" data-spell-filter="{{level}}">
+      {{#if (eq level 0)}}- 0 -{{else}}{{label}}{{/if}}
+    </button>
+    {{/each}}
+  </div>
+
+  {{!-- Spells table by level --}}
+  {{#each spellsByLevel}}
+  <div class="bcs-spell-level-section" data-spell-level="{{level}}">
+    <div class="bcs-spell-level-header">
+      <span class="bcs-spell-level-title">{{label}}</span>
+      {{#if ../spellSlots}}
+      {{#each ../spellSlots}}
+      {{#if (eq level ../level)}}
+      <div class="bcs-slot-pips-inline">
+        {{#each pips}}
+        <span class="bcs-slot-pip {{#if used}}used{{/if}}">■</span>
+        {{/each}}
+        <span class="bcs-slot-label">SLOTS</span>
+      </div>
+      {{/if}}
+      {{/each}}
+      {{/if}}
+    </div>
+
+    <table class="bcs-spell-table">
+      <thead>
+        <tr>
+          <th class="col-cast"></th>
+          <th class="col-name">Name</th>
+          <th class="col-time">Time</th>
+          <th class="col-range">Range</th>
+          <th class="col-hit">Hit / DC</th>
+          <th class="col-effect">Effect</th>
+          <th class="col-notes">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each spells}}
+        <tr class="bcs-spell-row" data-item-id="{{id}}">
+          <td class="col-cast">
+            {{#if (eq level 0)}}
+            <span class="bcs-cast-badge cantrip">AT<br>WILL</span>
+            {{else}}
+            <span class="bcs-cast-badge">{{level}}</span>
+            {{/if}}
+          </td>
+          <td class="col-name">
+            <div class="bcs-spell-name-cell">
+              <span class="bcs-spell-name">{{name}}
+                {{#if concentration}}<span class="bcs-spell-icon" title="Concentration">◆</span>{{/if}}
+                {{#if ritual}}<span class="bcs-spell-icon" title="Ritual">ℛ</span>{{/if}}
+              </span>
+              <span class="bcs-spell-source">{{source}}</span>
+            </div>
+          </td>
+          <td class="col-time">{{castTime}}</td>
+          <td class="col-range">{{range}}</td>
+          <td class="col-hit">{{hitDc}}</td>
+          <td class="col-effect">{{effect}}</td>
+          <td class="col-notes">{{components}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{/each}}
+</div>

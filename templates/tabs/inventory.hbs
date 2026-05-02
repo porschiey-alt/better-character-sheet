@@ -1,0 +1,70 @@
+{{!-- Inventory Tab: DnDBeyond-style table layout --}}
+<div class="bcs-inventory">
+  {{!-- Weight & Gold header --}}
+  <div class="bcs-inv-header">
+    <div class="bcs-inv-weight-summary">
+      <strong>Weight Carried: {{encumbrance.value}} lb.</strong>
+      {{#if encumbrance.encumbered}}<span class="bcs-encumbered">Encumbered</span>{{else}}<span class="bcs-unencumbered">Unencumbered</span>{{/if}}
+    </div>
+    <div class="bcs-inv-gold">
+      {{system.currency.gp}} <i class="fas fa-coins" style="color: #c8a85c"></i>
+    </div>
+  </div>
+
+  {{!-- Filter pills --}}
+  <div class="bcs-inv-filters">
+    <button class="bcs-filter-pill active" data-inv-filter="all">ALL</button>
+    <button class="bcs-filter-pill" data-inv-filter="equipment">EQUIPMENT</button>
+    <button class="bcs-filter-pill" data-inv-filter="consumable">CONSUMABLES</button>
+    <button class="bcs-filter-pill" data-inv-filter="container">BACKPACK</button>
+    <button class="bcs-filter-pill" data-inv-filter="loot">OTHER</button>
+  </div>
+
+  {{!-- Inventory table --}}
+  {{#each inventoryGroups}}
+  {{#if items.length}}
+  <div class="bcs-inv-section" data-inv-type="{{type}}">
+    <div class="bcs-inv-section-header">
+      <span class="bcs-inv-section-title">{{label}} ({{items.length}})</span>
+    </div>
+    <table class="bcs-inv-table">
+      <thead>
+        <tr>
+          <th class="col-active">Active</th>
+          <th class="col-name">Name</th>
+          <th class="col-weight">Weight</th>
+          <th class="col-qty">Qty</th>
+          <th class="col-cost">Cost</th>
+          <th class="col-notes">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each items}}
+        <tr class="bcs-inv-row" data-item-id="{{id}}">
+          <td class="col-active">
+            <span class="bcs-equip-check {{#if equipped}}equipped{{/if}}">
+              {{#if equipped}}■{{else}}□{{/if}}
+            </span>
+          </td>
+          <td class="col-name">
+            <div class="bcs-inv-name-cell">
+              <span class="bcs-inv-item-name {{#if attuned}}attuned{{/if}}">{{name}}</span>
+              <span class="bcs-inv-item-type">{{subtype}}</span>
+            </div>
+          </td>
+          <td class="col-weight">{{#if weight}}{{weight}} lb.{{else}}—{{/if}}</td>
+          <td class="col-qty">{{quantity}}</td>
+          <td class="col-cost">{{#if cost}}{{cost}}{{else}}—{{/if}}</td>
+          <td class="col-notes">{{notes}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{/if}}
+  {{/each}}
+
+  {{#unless hasInventory}}
+  <div class="bcs-empty-state">No items in inventory</div>
+  {{/unless}}
+</div>

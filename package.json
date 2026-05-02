@@ -1,0 +1,17 @@
+{
+  "name": "better-character-sheet",
+  "version": "0.1.0",
+  "description": "A DnDBeyond-inspired character sheet replacement for FoundryVTT dnd5e",
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch",
+    "clean": "powershell -Command \"Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue\""
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.3",
+    "esbuild-sass-plugin": "^3.7.0",
+    "playwright": "^1.59.1",
+    "typescript": "^5.7.0"
+  }
+}

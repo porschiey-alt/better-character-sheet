@@ -1,0 +1,70 @@
+{{!-- Sidebar: Saving Throws, Passives, Senses, Proficiencies --}}
+<div class="bcs-sidebar">
+  {{!-- Saving Throws --}}
+  <div class="bcs-section">
+    <h3 class="bcs-section-title">Saving Throws</h3>
+    <ul class="bcs-save-list">
+      {{#each saves}}
+      <li class="bcs-save-item" data-ability="{{key}}">
+        <span class="bcs-prof-dot {{#if proficient}}proficient{{/if}}"></span>
+        <span class="bcs-save-label">{{abbr}}</span>
+        <span class="bcs-save-mod">{{ dnd5e-formatModifier mod }}</span>
+      </li>
+      {{/each}}
+    </ul>
+  </div>
+
+  {{!-- Passive Scores --}}
+  <div class="bcs-section">
+    <h3 class="bcs-section-title">Passive Scores</h3>
+    <ul class="bcs-passive-list">
+      <li>
+        <span class="bcs-passive-val">{{system.skills.prc.passive}}</span>
+        <span class="bcs-passive-label">Perception</span>
+      </li>
+      <li>
+        <span class="bcs-passive-val">{{system.skills.inv.passive}}</span>
+        <span class="bcs-passive-label">Investigation</span>
+      </li>
+      <li>
+        <span class="bcs-passive-val">{{system.skills.ins.passive}}</span>
+        <span class="bcs-passive-label">Insight</span>
+      </li>
+    </ul>
+  </div>
+
+  {{!-- Senses --}}
+  {{#if senses}}
+  <div class="bcs-section">
+    <h3 class="bcs-section-title">Senses</h3>
+    <ul class="bcs-senses-list">
+      {{#each senses}}
+      <li>{{label}}: {{value}}</li>
+      {{/each}}
+    </ul>
+  </div>
+  {{/if}}
+
+  {{!-- Proficiencies --}}
+  <div class="bcs-section">
+    <h3 class="bcs-section-title">Proficiencies</h3>
+    {{#if traits.armor}}
+    <div class="bcs-trait-group">
+      <span class="bcs-trait-label">Armor</span>
+      <span class="bcs-trait-value">{{traits.armor}}</span>
+    </div>
+    {{/if}}
+    {{#if traits.weapon}}
+    <div class="bcs-trait-group">
+      <span class="bcs-trait-label">Weapons</span>
+      <span class="bcs-trait-value">{{traits.weapon}}</span>
+    </div>
+    {{/if}}
+    {{#if traits.languages}}
+    <div class="bcs-trait-group">
+      <span class="bcs-trait-label">Languages</span>
+      <span class="bcs-trait-value">{{traits.languages}}</span>
+    </div>
+    {{/if}}
+  </div>
+</div>

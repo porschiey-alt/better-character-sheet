@@ -1,0 +1,64 @@
+{{!-- Extras Tab: Conditions, resistances, miscellaneous --}}
+<div class="bcs-extras">
+  {{!-- Conditions / Exhaustion --}}
+  <div class="bcs-extras-section">
+    <h4 class="bcs-extras-title">Conditions</h4>
+    <div class="bcs-exhaustion">
+      <span class="bcs-extras-label">Exhaustion:</span>
+      <span class="bcs-extras-value">{{system.attributes.exhaustion}}</span>
+    </div>
+  </div>
+
+  {{!-- Resistances / Immunities --}}
+  {{#if resistances.length}}
+  <div class="bcs-extras-section">
+    <h4 class="bcs-extras-title">Damage Resistances</h4>
+    <div class="bcs-extras-list">
+      {{#each resistances}}<span class="bcs-extras-tag">{{this}}</span>{{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{#if immunities.length}}
+  <div class="bcs-extras-section">
+    <h4 class="bcs-extras-title">Damage Immunities</h4>
+    <div class="bcs-extras-list">
+      {{#each immunities}}<span class="bcs-extras-tag">{{this}}</span>{{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{#if conditionImmunities.length}}
+  <div class="bcs-extras-section">
+    <h4 class="bcs-extras-title">Condition Immunities</h4>
+    <div class="bcs-extras-list">
+      {{#each conditionImmunities}}<span class="bcs-extras-tag">{{this}}</span>{{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{!-- Hit Dice --}}
+  <div class="bcs-extras-section">
+    <h4 class="bcs-extras-title">Hit Dice</h4>
+    <div class="bcs-extras-value">{{system.attributes.hd.value}} / {{system.attributes.hd.max}}</div>
+  </div>
+
+  {{!-- Death Saves --}}
+  <div class="bcs-extras-section">
+    <h4 class="bcs-extras-title">Death Saves</h4>
+    <div class="bcs-death-saves">
+      <span class="bcs-ds-label">Successes:</span>
+      <span class="bcs-ds-pips">
+        <span class="bcs-ds-pip {{#if system.attributes.death.success}}success{{/if}}">●</span>
+        <span class="bcs-ds-pip {{#if (gte system.attributes.death.success 2)}}success{{/if}}">●</span>
+        <span class="bcs-ds-pip {{#if (gte system.attributes.death.success 3)}}success{{/if}}">●</span>
+      </span>
+      <span class="bcs-ds-label">Failures:</span>
+      <span class="bcs-ds-pips">
+        <span class="bcs-ds-pip {{#if system.attributes.death.failure}}failure{{/if}}">●</span>
+        <span class="bcs-ds-pip {{#if (gte system.attributes.death.failure 2)}}failure{{/if}}">●</span>
+        <span class="bcs-ds-pip {{#if (gte system.attributes.death.failure 3)}}failure{{/if}}">●</span>
+      </span>
+    </div>
+  </div>
+</div>
