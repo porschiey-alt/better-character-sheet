@@ -225,6 +225,16 @@ describe("isSpellAvailable", () => {
   it("prepared falsy value (0) is treated as unavailable", () => {
     expect(isSpellAvailable({ system: { level: 1, method: "prepared", prepared: 0 } })).toBe(false);
   });
+
+  it("unprepared ritual spell is still available", () => {
+    const props = new Set(["ritual"]);
+    expect(isSpellAvailable({ system: { level: 1, method: "prepared", prepared: false, properties: props } })).toBe(true);
+  });
+
+  it("unprepared non-ritual spell is unavailable", () => {
+    const props = new Set(["vocal", "somatic"]);
+    expect(isSpellAvailable({ system: { level: 1, method: "prepared", prepared: false, properties: props } })).toBe(false);
+  });
 });
 
 // ── buildSpellSlots ─────────────────────────────────────────────────

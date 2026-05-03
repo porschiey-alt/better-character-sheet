@@ -155,6 +155,7 @@ export function resolveFormula(formula: string, rollData: Record<string, any>): 
 /**
  * Determine if a spell should be shown as available (prepared/always/innate/etc).
  * If a `prepared` property exists (even for unrecognized methods), we respect it.
+ * Ritual spells that are learned (have a prepared property) always show even if not prepped.
  */
 export function isSpellAvailable(spell: any): boolean {
   const lvl = spell.system.level ?? 0;
@@ -163,7 +164,11 @@ export function isSpellAvailable(spell: any): boolean {
   if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return true;
   // For "prepared" mode or any mode that has a prepared property, respect the flag
   if (mode === "prepared" || spell.system.prepared !== undefined) {
-    return !!spell.system.prepared;
+    if (!!spell.system.prepared) return true;
+    // Ritual spells that are learned (on the sheet) but not prepped still show
+    const props = spell.system.properties;
+    if (props?.has?.("ritual")) return true;
+    return false;
   }
   return true;
 }
