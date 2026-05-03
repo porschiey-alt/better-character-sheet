@@ -286,68 +286,102 @@ export function createBetterCharacterSheet(): any {
       }
 
       // Build action features (feats with activation or uses, with descriptions + pips)
-      const actionFeatures = actor.items
-        .filter(
-          (i: any) =>
-            i.type === "feat" &&
-            (i.system.uses?.max || i.system.activation?.type || i.system.activities?.size > 0)
-        )
-        .map((i: any) => {
-          const uses = i.system.uses?.max
-            ? {
-                value: i.system.uses.value ?? 0,
-                max: i.system.uses.max,
-                per: i.system.uses.recovery?.[0]?.type || "",
-              }
-            : null;
-          const pips: { filled: boolean }[] = [];
-          if (uses) {
-            for (let p = 0; p < uses.max; p++) {
-              pips.push({ filled: p < uses.value });
+      const actionFeatures: any[] = [];
+      for (const i of actor.items.filter(
+        (i: any) =>
+          i.type === "feat" &&
+          (i.system.uses?.max || i.system.activation?.type || i.system.activities?.size > 0)
+      )) {
+        const uses = i.system.uses?.max
+          ? {
+              value: i.system.uses.value ?? 0,
+              max: i.system.uses.max,
+              per: i.system.uses.recovery?.[0]?.type || "",
+            }
+          : null;
+        const pips: { filled: boolean }[] = [];
+        if (uses) {
+          for (let p = 0; p < uses.max; p++) {
+            pips.push({ filled: p < uses.value });
+          }
+        }
+
+        const fullDesc = i.system.description?.value || "";
+        const textOnly = fullDesc.replace(/<[^>]*>/g, "").trim();
+        const truncated = textOnly.length > 80
+          ? textOnly.substring(0, 80) + "…"
+          : textOnly;
+
+        const typeMap: Record<string, string> = {
+          action: "action", bonus: "bonus", reaction: "reaction",
+          minute: "other", hour: "other", special: "other",
+        };
+        const labelMap: Record<string, string> = {
+          minute: `${i.system.activation?.value || ""} Minutes`,
+          hour: `${i.system.activation?.value || ""} Hours`,
+        };
+
+        // Expand: create an entry per activity that has an activation type
+        const activities = i.system.activities;
+        const activitiesWithType: any[] = [];
+        if (activities && activities.size > 0) {
+          for (const act of activities.values()) {
+            const at = act.activation?.type;
+            if (at && typeMap[at] && typeMap[at] !== "other") {
+              activitiesWithType.push(act);
             }
           }
+        }
 
-          // Resolve activation type: check item level first, then activities
+        if (activitiesWithType.length > 1) {
+          // Multiple activities — create one entry per activity
+          for (const act of activitiesWithType) {
+            const at = act.activation?.type || "other";
+            const actDesc = act.description?.value || fullDesc;
+            const actTextOnly = actDesc.replace(/<[^>]*>/g, "").trim();
+            const actTruncated = actTextOnly.length > 80
+              ? actTextOnly.substring(0, 80) + "…"
+              : actTextOnly;
+            actionFeatures.push({
+              id: i.id,
+              activityId: act.id || act._id,
+              name: act.name || i.name,
+              img: i.img,
+              description: actDesc,
+              truncatedDescription: actTruncated,
+              hasLongDescription: actTextOnly.length > 80,
+              activationType: typeMap[at] || "other",
+              activationLabel: "",
+              uses,
+              pips,
+            });
+          }
+        } else {
+          // Single activity or no activities — one entry for the whole item
           let actType = i.system.activation?.type || "";
-          if (!actType && i.system.activities) {
-            for (const act of i.system.activities.values()) {
-              if (act.activation?.type) {
-                actType = act.activation.type;
-                break;
-              }
-            }
+          if (!actType && activitiesWithType.length === 1) {
+            actType = activitiesWithType[0].activation?.type || "";
           }
           actType = actType || "other";
-
-          const typeMap: Record<string, string> = {
-            action: "action", bonus: "bonus", reaction: "reaction",
-            minute: "other", hour: "other", special: "other",
-          };
           const activationType = typeMap[actType] || "other";
-          const labelMap: Record<string, string> = {
-            minute: `${i.system.activation?.value || ""} Minutes`,
-            hour: `${i.system.activation?.value || ""} Hours`,
-          };
-          const fullDesc = i.system.description?.value || "";
-          const textOnly = fullDesc.replace(/<[^>]*>/g, "").trim();
-          const truncated = textOnly.length > 80
-            ? textOnly.substring(0, 80) + "…"
-            : textOnly;
 
-          return {
-            id: i.id,
-            name: i.name,
-            img: i.img,
-            description: fullDesc,
-            truncatedDescription: truncated,
-            hasLongDescription: textOnly.length > 80,
-            activationType,
-            activationLabel: labelMap[actType] || "",
-            uses,
-            pips,
-          };
-        })
-        .filter((f: any) => f.activationType !== "other" || f.uses);
+          // Only include if it has a real activation type or limited uses
+          if (activationType !== "other" || uses) {
+            actionFeatures.push({
+              id: i.id,
+              name: i.name,
+              img: i.img,
+              description: fullDesc,
+              truncatedDescription: truncated,
+              hasLongDescription: textOnly.length > 80,
+              activationType,
+              activationLabel: labelMap[actType] || "",
+              uses,
+              pips,
+            });
+          }
+        }
+      }
 
       // Categorize spells by activation type for the action tab sections
       const allSpellItems = actor.items.filter(
@@ -1850,7 +1884,7 @@ export function createBetterCharacterSheet(): any {
       };
 
       if (panel && panelTitle && panelBody) {
-        // Feature descriptions — show full description + Edit button
+        // Feature descriptions — show full description + Edit or Use button
         this.element
           .querySelectorAll(
             ".bcs-feature-desc-truncated, .bcs-action-feature-desc-truncated"
@@ -1858,21 +1892,36 @@ export function createBetterCharacterSheet(): any {
           .forEach((el: Element) => {
             el.addEventListener("click", () => {
               const itemId = (el as HTMLElement).dataset.itemId;
+              const activityId = (el as HTMLElement).dataset.activityId;
               const item = (this as any).document.items.get(itemId);
               if (!item) return;
 
-              panelTitle.textContent = item.name;
-              panelBody.innerHTML =
-                item.system.description?.value || "";
-
               resetPanel();
 
-              // Show Edit Feature button to open native item sheet
-              if (panelActions) panelActions.style.display = "";
-              if (castBtn) {
-                castBtn.dataset.itemId = item.id;
-                castBtn.dataset.openSheet = "true";
-                castBtn.innerHTML = `<i class="fas fa-edit"></i> Edit Feature`;
+              // If a specific activity is referenced, show that activity's details + Use
+              if (activityId && item.system.activities) {
+                let activity: any = null;
+                for (const act of item.system.activities.values()) {
+                  if ((act.id || act._id) === activityId) { activity = act; break; }
+                }
+                panelTitle.textContent = activity?.name || item.name;
+                panelBody.innerHTML = activity?.description?.value || item.system.description?.value || "";
+                if (panelActions) panelActions.style.display = "";
+                if (castBtn) {
+                  castBtn.dataset.itemId = item.id;
+                  castBtn.dataset.activityId = activityId;
+                  castBtn.innerHTML = `<i class="fas fa-bolt"></i> Use`;
+                }
+              } else {
+                // Generic feature — show description + Edit button
+                panelTitle.textContent = item.name;
+                panelBody.innerHTML = item.system.description?.value || "";
+                if (panelActions) panelActions.style.display = "";
+                if (castBtn) {
+                  castBtn.dataset.itemId = item.id;
+                  castBtn.dataset.openSheet = "true";
+                  castBtn.innerHTML = `<i class="fas fa-edit"></i> Edit Feature`;
+                }
               }
 
               panel.dataset.panel = "open";
