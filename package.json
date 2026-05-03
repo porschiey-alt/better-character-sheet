@@ -6,12 +6,15 @@
   "scripts": {
     "build": "node esbuild.config.mjs",
     "watch": "node esbuild.config.mjs --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "clean": "powershell -Command \"Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue\""
   },
   "devDependencies": {
     "esbuild": "^0.27.3",
     "esbuild-sass-plugin": "^3.7.0",
     "playwright": "^1.59.1",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.5"
   }
 }

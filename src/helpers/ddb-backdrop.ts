@@ -20,7 +20,7 @@ export function getDDBBackdropUrl(actor: any): string | null {
 /**
  * Extract the best backdrop URL from a DDB decorations object.
  */
-function pickBackdropUrl(decorations: any): string | null {
+export function pickBackdropUrl(decorations: any): string | null {
   if (!decorations) return null;
   return (
     decorations.largeBackdropAvatarUrl ??
