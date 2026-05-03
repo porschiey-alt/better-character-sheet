@@ -1551,16 +1551,15 @@ export function createBetterCharacterSheet(): any {
         }
       }
 
-      // 13. Feature use pips — click to toggle used/available
+      // 13. Feature use pips — click to toggle, update DOM in-place
+      const pendingUsesChanges = new Map<string, number>();
+
       this.element
         .querySelectorAll(".bcs-feat-pip")
         .forEach((el: Element) => {
           el.addEventListener("click", (e: Event) => {
             e.stopPropagation();
             e.preventDefault();
-            // Save scroll before the update triggers re-render
-            const tabContent = this.element?.querySelector(".bcs-tab-content") as HTMLElement;
-            if (tabContent) this._bcsScrollTop = tabContent.scrollTop;
             const itemEl = el.closest(
               "[data-item-id]"
             ) as HTMLElement;
@@ -1570,16 +1569,45 @@ export function createBetterCharacterSheet(): any {
             if (!item) return;
             const usesMax = Number(item.system.uses?.max) || 0;
             if (!usesMax) return;
-            const spent = Number(item.system.uses?.spent) || 0;
+
+            // Get current spent (pending override or actual)
+            const currentSpent = pendingUsesChanges.has(itemId)
+              ? pendingUsesChanges.get(itemId)!
+              : (Number(item.system.uses?.spent) || 0);
+
             const isFilled = el.classList.contains("filled");
-            // filled = available, clicking it = spend one
-            // not filled = spent, clicking it = recover one
             const newSpent = isFilled
-              ? Math.min(spent + 1, usesMax)
-              : Math.max(spent - 1, 0);
-            item.update({ "system.uses.spent": newSpent });
+              ? Math.min(currentSpent + 1, usesMax)
+              : Math.max(currentSpent - 1, 0);
+            pendingUsesChanges.set(itemId, newSpent);
+
+            // Update all pips for this item in-place
+            const allPipContainers = this.element.querySelectorAll(`[data-item-id="${itemId}"]`);
+            allPipContainers.forEach((container: Element) => {
+              const pips = container.querySelectorAll(".bcs-feat-pip");
+              pips.forEach((pip: Element, idx: number) => {
+                if (idx >= newSpent) {
+                  pip.classList.add("filled");
+                } else {
+                  pip.classList.remove("filled");
+                }
+              });
+            });
           });
         });
+
+      // Flush pending uses changes on tab change
+      const flushPendingUses = async () => {
+        if (pendingUsesChanges.size === 0) return;
+        const updates = [...pendingUsesChanges.entries()].map(([id, spent]) => ({
+          _id: id, "system.uses.spent": spent,
+        }));
+        pendingUsesChanges.clear();
+        await actor.updateEmbeddedDocuments("Item", updates);
+      };
+      this.element.querySelectorAll(".bcs-tab-btn").forEach((btn: Element) => {
+        btn.addEventListener("click", () => flushPendingUses());
+      });
 
       // Combat actions — click to post description to chat
       this.element
