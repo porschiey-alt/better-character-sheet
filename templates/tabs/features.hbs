@@ -33,6 +33,15 @@
       {{#if truncatedDescription}}
       <div class="bcs-feature-desc-truncated" data-item-id="{{id}}">{{truncatedDescription}}</div>
       {{/if}}
+      {{#each subActions}}
+      <div class="bcs-feature-subaction" data-item-id="{{itemId}}" data-activity-id="{{id}}">
+        <span class="bcs-subaction-badge">{{activationLabel}}</span>
+        <span class="bcs-subaction-name">{{name}}</span>
+        {{#if truncatedDescription}}
+        <span class="bcs-subaction-desc">{{truncatedDescription}}</span>
+        {{/if}}
+      </div>
+      {{/each}}
     </div>
     {{/each}}
   </div>

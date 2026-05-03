@@ -474,6 +474,31 @@ export function createBetterCharacterSheet(): any {
           ? textOnly.substring(0, 80) + "…"
           : textOnly;
 
+        // Extract activities with activation types (action/bonus/reaction)
+        const activationLabels: Record<string, string> = {
+          action: "Action", bonus: "Bonus Action", reaction: "Reaction",
+        };
+        const subActions: any[] = [];
+        if (i.system.activities?.size > 0) {
+          for (const act of i.system.activities.values()) {
+            const actType = act.activation?.type || act.type;
+            if (activationLabels[actType]) {
+              const actDesc = act.description?.value || "";
+              const actTextOnly = actDesc.replace(/<[^>]*>/g, "").trim();
+              const actTruncated = actTextOnly.length > 60
+                ? actTextOnly.substring(0, 60) + "…"
+                : actTextOnly;
+              subActions.push({
+                id: act.id || act._id,
+                name: act.name || i.name,
+                activationLabel: activationLabels[actType],
+                truncatedDescription: actTruncated,
+                itemId: i.id,
+              });
+            }
+          }
+        }
+
         return {
           id: i.id,
           name: i.name,
@@ -484,6 +509,7 @@ export function createBetterCharacterSheet(): any {
           hasLongDescription: textOnly.length > 80,
           uses,
           pips,
+          subActions,
         };
       }
 
@@ -1334,37 +1360,6 @@ export function createBetterCharacterSheet(): any {
 
         // Open panel
         this.element.querySelector(".bcs-manage-spells-btn")?.addEventListener("click", () => {
-          // Debug: log all spells and their prep state
-          const allSpells = [...actor.items].filter((i: any) => i.type === "spell");
-          console.group("BCS Spell Debug — all spells on actor");
-          for (const sp of allSpells) {
-            console.log(
-              `[${sp.system.level ?? 0}] ${sp.name}`,
-              `| method="${sp.system.method}"`,
-              `| prepared=${sp.system.prepared}`,
-              `| preparation=`, sp.system.preparation,
-              `| properties=`, sp.system.properties ? [...sp.system.properties] : "none",
-            );
-          }
-          console.log(`Prep count: ${countPrepared()} / ${maxPrep}`);
-          // Log actor-level spell data to find max prepared field
-          console.log("actor.system.attributes.spellcasting =", actor.system.attributes?.spellcasting);
-          console.log("actor.system.spells =", actor.system.spells);
-          console.log("actor.system.attributes.spell =", actor.system.attributes?.spell);
-          // Log spellcasting class info
-          if (castingClass) {
-            console.log("castingClass.system.spellcasting =", castingClass.system.spellcasting);
-            console.log("castingClass.system.spellcasting.preparation =", castingClass.system.spellcasting?.preparation);
-            console.log("castingClass.system.levels =", castingClass.system.levels);
-          }
-          // Search for prepared/max on the actor
-          console.log("actor.system.attributes.spell =", actor.system.attributes?.spell);
-          console.log("actor.system.details.level =", actor.system.details?.level);
-          // Also log cantrips known count
-          const cantripCount = [...actor.items].filter((i: any) => i.type === "spell" && (i.system.level ?? 0) === 0).length;
-          console.log(`Cantrips: ${cantripCount}`);
-          console.groupEnd();
-
           populateManagePanel();
           if (isWizardClass && learnBar) learnBar.style.display = "";
           this._bcsManagePanelOpen = true;
@@ -1845,12 +1840,16 @@ export function createBetterCharacterSheet(): any {
       const resetPanel = () => {
         if (panelActions) panelActions.style.display = "none";
         if (panelMeta) { panelMeta.style.display = "none"; panelMeta.innerHTML = ""; }
-        if (castBtn) delete castBtn.dataset.itemId;
+        if (castBtn) {
+          delete castBtn.dataset.itemId;
+          delete castBtn.dataset.activityId;
+          castBtn.innerHTML = `<i class="fas fa-magic"></i> Cast Spell`;
+        }
         if (upcastDiv) upcastDiv.innerHTML = "";
       };
 
       if (panel && panelTitle && panelBody) {
-        // Feature descriptions — hide spell-specific sections
+        // Feature descriptions — show full description + swap-out dropdown if applicable
         this.element
           .querySelectorAll(
             ".bcs-feature-desc-truncated, .bcs-action-feature-desc-truncated"
@@ -1863,18 +1862,97 @@ export function createBetterCharacterSheet(): any {
               panelTitle.textContent = item.name;
               panelBody.innerHTML =
                 item.system.description?.value || "";
+
               resetPanel();
+
+              // Check for swap-out choices (features with multiple activities)
+              const activities = item.system.activities;
+              if (activities && activities.size > 1) {
+                const choices: { id: string; name: string }[] = [];
+                for (const act of activities.values()) {
+                  if (act.name) choices.push({ id: act.id || act._id, name: act.name });
+                }
+                if (choices.length > 1) {
+                  const flagKey = `feature-config-${item.id}`;
+                  const currentChoice = actor.getFlag("better-character-sheet", flagKey) || "";
+                  let dropHtml = `<div class="bcs-detail-swap-config">`;
+                  dropHtml += `<label class="bcs-swap-label">Active Configuration</label>`;
+                  dropHtml += `<select class="bcs-swap-select" data-flag-key="${flagKey}">`;
+                  dropHtml += `<option value="">— Select —</option>`;
+                  for (const ch of choices) {
+                    const sel = ch.id === currentChoice ? "selected" : "";
+                    dropHtml += `<option value="${ch.id}" ${sel}>${ch.name}</option>`;
+                  }
+                  dropHtml += `</select></div>`;
+                  panelBody.insertAdjacentHTML("afterbegin", dropHtml);
+
+                  panelBody.querySelector(".bcs-swap-select")?.addEventListener("change", (e: Event) => {
+                    const sel = e.target as HTMLSelectElement;
+                    const key = sel.dataset.flagKey;
+                    if (!key) return;
+                    if (sel.value) {
+                      actor.setFlag("better-character-sheet", key, sel.value);
+                    } else {
+                      actor.unsetFlag("better-character-sheet", key);
+                    }
+                  });
+                }
+              }
+
               panel.dataset.panel = "open";
             });
           });
 
-        // Cast button — use the spell stored by item id
+        // Feature sub-actions — open detail panel with Use button
+        this.element
+          .querySelectorAll(".bcs-feature-subaction")
+          .forEach((el: Element) => {
+            el.addEventListener("click", () => {
+              const itemId = (el as HTMLElement).dataset.itemId;
+              const activityId = (el as HTMLElement).dataset.activityId;
+              const item = (this as any).document.items.get(itemId);
+              if (!item) return;
+              // Find the specific activity
+              let activity: any = null;
+              if (activityId && item.system.activities) {
+                for (const act of item.system.activities.values()) {
+                  if ((act.id || act._id) === activityId) { activity = act; break; }
+                }
+              }
+              panelTitle.textContent = activity?.name || item.name;
+              const actDesc = activity?.description?.value || item.system.description?.value || "";
+              panelBody.innerHTML = actDesc;
+              resetPanel();
+              // Show Use button with the activity
+              if (panelActions) panelActions.style.display = "";
+              if (castBtn) {
+                castBtn.dataset.itemId = item.id;
+                if (activityId) castBtn.dataset.activityId = activityId;
+                castBtn.innerHTML = `<i class="fas fa-bolt"></i> Use`;
+              }
+              panel.dataset.panel = "open";
+            });
+            (el as HTMLElement).style.cursor = "pointer";
+          });
+
+        // Cast/Use button — use the spell or activity stored by item id
         if (castBtn) {
           castBtn.addEventListener("click", (e: Event) => {
             const itemId = castBtn.dataset.itemId;
             if (!itemId) return;
             const item = actor.items.get(itemId);
             if (!item) return;
+            // If a specific activity is targeted, find and use it
+            const activityId = castBtn.dataset.activityId;
+            if (activityId && item.system.activities) {
+              for (const act of item.system.activities.values()) {
+                if ((act.id || act._id) === activityId) {
+                  act.use({ event: e, legacy: false });
+                  return;
+                }
+              }
+            }
+            // Default: first activity or item.use()
             const activity = item.system.activities?.values()?.next()?.value;
             if (activity) {
               activity.use({ event: e, legacy: false });
@@ -1948,6 +2026,18 @@ export function createBetterCharacterSheet(): any {
       el.style.setProperty("--bcs-accent", color);
       // Dimmed version for borders
       el.style.setProperty("--bcs-accent-dim", this._darkenColor(color, 0.4));
+      // Contrast text color for buttons with accent background
+      el.style.setProperty("--bcs-accent-text", this._contrastTextColor(color));
+    }
+
+    // Return black or white depending on which has better contrast with the given hex color
+    _contrastTextColor(hex: string): string {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      // Relative luminance (WCAG formula)
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return luminance > 0.5 ? "#000000" : "#ffffff";
     }
 
     _applyBgColor(color: string) {

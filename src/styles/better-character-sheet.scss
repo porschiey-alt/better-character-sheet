@@ -25,6 +25,7 @@ $radius-sm: 4px;
   // CSS custom properties for theming
   --bcs-accent: #{$gold};
   --bcs-accent-dim: #{$gold-dim};
+  --bcs-accent-text: #000000;
   --bcs-bg-dark: #{$bg-dark};
   --bcs-bg-card: #{$bg-card};
   --bcs-bg-card-alt: #{$bg-card-alt};
@@ -1096,6 +1097,7 @@ $radius-sm: 4px;
     align-items: center;
     gap: 24px;
     padding: 8px 0 12px;
+    position: relative;
   }
 
   .bcs-spell-stat {
@@ -1249,7 +1251,8 @@ $radius-sm: 4px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    position: relative;
+    position: absolute;
+    right: 0;
     width: 36px;
     height: 36px;
     background: rgba(255,255,255,0.06);
@@ -1259,7 +1262,6 @@ $radius-sm: 4px;
     font-size: 1.1rem;
     cursor: pointer;
     transition: border-color 0.15s, background 0.15s;
-    margin-left: 8px;
     flex-shrink: 0;
 
     &:hover { border-color: var(--bcs-accent); background: rgba(255,255,255,0.1); }
@@ -2030,6 +2032,48 @@ $radius-sm: 4px;
     }
   }
 
+  .bcs-feature-subaction {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 3px 0 3px 12px;
+    margin-top: 2px;
+    border-left: 2px solid var(--bcs-accent-dim);
+    cursor: pointer;
+
+    &:hover {
+      border-left-color: var(--bcs-accent);
+      background: rgba(255,255,255,0.03);
+    }
+  }
+
+  .bcs-subaction-badge {
+    font-size: 0.55rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--bcs-accent);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid $border-color;
+    border-radius: 3px;
+    padding: 1px 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .bcs-subaction-name {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: $text-primary;
+  }
+
+  .bcs-subaction-desc {
+    font-size: 0.72rem;
+    color: $text-muted;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   // ===== SLIDE-OUT DETAIL PANEL =====
   .bcs-detail-panel {
     position: absolute;
@@ -2088,7 +2132,7 @@ $radius-sm: 4px;
     width: 100%;
     padding: 8px 12px;
     background: var(--bcs-accent);
-    color: #fff;
+    color: var(--bcs-accent-text);
     border: none;
     border-radius: 4px;
     font-size: 0.85rem;
@@ -2201,6 +2245,37 @@ $radius-sm: 4px;
     a { color: var(--bcs-accent); }
   }
 
+  .bcs-detail-swap-config {
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid $border-color;
+    border-radius: 4px;
+  }
+
+  .bcs-swap-label {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $text-muted;
+    margin-bottom: 4px;
+  }
+
+  .bcs-swap-select {
+    width: 100%;
+    padding: 5px 8px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid $border-color;
+    border-radius: 4px;
+    color: $text-primary;
+    font-size: 0.8rem;
+    outline: none;
+    &:focus { border-color: var(--bcs-accent); }
+    option { background: #1a1d24; }
+  }
+
   // ===== EMPTY STATE =====
   .bcs-empty-state {
     color: $text-muted;
@@ -2308,7 +2383,7 @@ $radius-sm: 4px;
     border: none;
     border-radius: $radius;
     background: var(--bcs-accent);
-    color: $bg-dark;
+    color: var(--bcs-accent-text);
     font-size: 0.85rem;
     font-weight: 700;
     text-transform: uppercase;
