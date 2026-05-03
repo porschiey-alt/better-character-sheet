@@ -17,13 +17,9 @@
       <span class="bcs-spell-stat-lbl">Save DC</span>
     </div>
     {{/each}}
-  </div>
-  {{/if}}
-
-  {{!-- Manage Spells button --}}
-  {{#if showManageSpells}}
-  <div class="bcs-manage-spells-bar">
-    <button type="button" class="bcs-manage-spells-btn"><i class="fas fa-book-open"></i> Manage Spells</button>
+    {{#if ../showManageSpells}}
+    <button type="button" class="bcs-manage-spells-btn" title="Manage Spells"><i class="fas fa-book-open"></i><i class="fas fa-cog bcs-manage-cog"></i></button>
+    {{/if}}
   </div>
   {{/if}}
 

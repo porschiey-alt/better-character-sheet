@@ -1093,6 +1093,7 @@ $radius-sm: 4px;
   .bcs-spell-stats {
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 24px;
     padding: 8px 0 12px;
   }
@@ -1244,25 +1245,32 @@ $radius-sm: 4px;
   }
 
   // ===== MANAGE SPELLS BUTTON =====
-  .bcs-manage-spells-bar {
-    display: flex;
-    justify-content: flex-end;
-    padding: 4px 0 8px;
-  }
-
   .bcs-manage-spells-btn {
-    padding: 5px 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 36px;
+    height: 36px;
     background: rgba(255,255,255,0.06);
     border: 1px solid $border-color;
-    border-radius: 4px;
+    border-radius: 6px;
     color: var(--bcs-accent);
-    font-size: 0.78rem;
-    font-weight: 600;
+    font-size: 1.1rem;
     cursor: pointer;
     transition: border-color 0.15s, background 0.15s;
+    margin-left: 8px;
+    flex-shrink: 0;
 
-    i { margin-right: 4px; }
     &:hover { border-color: var(--bcs-accent); background: rgba(255,255,255,0.1); }
+
+    .bcs-manage-cog {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      font-size: 0.5rem;
+      color: $text-muted;
+    }
   }
 
   // ===== MANAGE SPELLS PANEL =====

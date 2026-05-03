@@ -1168,12 +1168,14 @@ export function createBetterCharacterSheet(): any {
         }
 
         // Count currently prepared spells (non-cantrip, non-always)
+        // Count prepared spells that count against the max.
+        // Excludes cantrips, always/innate/atwill/pact, and any spell
+        // without method "prepared" (feature-granted always-prepped spells).
         const countPrepared = () => {
           return [...actor.items].filter((i: any) => {
             if (i.type !== "spell") return false;
             if ((i.system.level ?? 0) === 0) return false;
-            const m = i.system.method;
-            if (m === "always" || m === "innate" || m === "atwill" || m === "pact") return false;
+            if (i.system.method !== "prepared") return false;
             return !!i.system.prepared;
           }).length;
         };
