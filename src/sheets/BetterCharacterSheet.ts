@@ -1220,6 +1220,18 @@ export function createBetterCharacterSheet(): any {
           await actor.updateEmbeddedDocuments("Item", updates);
         };
 
+        // Pending spell additions (wizard) — flushed on panel close
+        const pendingAddDocs: any[] = [];
+        const pendingAddIds = new Set<string>();
+
+        const flushPendingAdds = async () => {
+          if (pendingAddDocs.length === 0) return;
+          const docs = [...pendingAddDocs];
+          pendingAddDocs.length = 0;
+          pendingAddIds.clear();
+          await actor.createEmbeddedDocuments("Item", docs);
+        };
+
         // Build the manage panel spell list
         const populateManagePanel = () => {
           // Save scroll position before repopulating
@@ -1359,7 +1371,7 @@ export function createBetterCharacterSheet(): any {
           managePanel.dataset.panel = "open";
         });
 
-        // Close panel — flush pending prep changes
+        // Close panel — flush pending prep changes and spell additions
         manageClose?.addEventListener("click", async () => {
           managePanel.dataset.panel = "closed";
           this._bcsManagePanelOpen = false;
@@ -1367,6 +1379,7 @@ export function createBetterCharacterSheet(): any {
           if (learnSection) learnSection.style.display = "none";
           if (learnBar) learnBar.style.display = "none";
           if (learnResults) learnResults.innerHTML = "";
+          await flushPendingAdds();
           await flushPendingPrep();
         });
 
@@ -1384,6 +1397,7 @@ export function createBetterCharacterSheet(): any {
         // Wizard: learn spells list + search/filter
         const populateLearnList = async () => {
           if (!learnResults) return;
+          const learnScrollTop = learnResults.scrollTop;
           const pack = (game as any).packs?.get("dnd5e.spells");
           if (!pack) {
             learnResults.innerHTML = `<div class="bcs-empty-state">Spell compendium not found</div>`;
@@ -1400,6 +1414,10 @@ export function createBetterCharacterSheet(): any {
           const ownedNames = new Set(
             [...actor.items].filter((i: any) => i.type === "spell").map((i: any) => `${i.name}::${i.system.level ?? 0}`)
           );
+          // Also count pending adds as owned
+          for (const doc of pendingAddDocs) {
+            ownedNames.add(`${doc.name}::${doc.system?.level ?? 0}`);
+          }
           const query = learnSearch?.value?.trim().toLowerCase() || "";
           const levelVal = learnLevelFilter?.value || "all";
 
@@ -1429,32 +1447,33 @@ export function createBetterCharacterSheet(): any {
               html += `<div class="bcs-manage-level-label" style="margin-top:8px;">${lvlLabels[lvl] || `Level ${lvl}`}</div>`;
             }
             const owned = ownedNames.has(`${m.name}::${lvl}`);
+            const justAdded = pendingAddIds.has(m._id);
             html += `<div class="bcs-manage-search-result ${owned ? "owned" : ""}">`;
             html += `<img src="${m.img || "icons/svg/mystery-man.svg"}" alt="" class="bcs-manage-spell-icon" />`;
             html += `<span class="bcs-manage-spell-name">${m.name}</span>`;
-            if (owned) {
-              html += `<span class="bcs-manage-owned-badge">In Book</span>`;
+            if (owned || justAdded) {
+              html += `<span class="bcs-manage-owned-badge">${justAdded ? "Added" : "In Book"}</span>`;
             } else {
               html += `<button class="bcs-manage-add-btn" data-pack-id="${m._id}" title="Add to spellbook"><i class="fas fa-plus"></i> Add</button>`;
             }
             html += `</div>`;
           }
           learnResults.innerHTML = html;
+          learnResults.scrollTop = learnScrollTop;
 
-          // Bind add buttons
+          // Bind add buttons — local queue, no server call
           learnResults.querySelectorAll(".bcs-manage-add-btn").forEach((el: Element) => {
             el.addEventListener("click", async (e: Event) => {
               e.stopPropagation();
               const packId = (el as HTMLElement).dataset.packId;
-              if (!packId) return;
+              if (!packId || pendingAddIds.has(packId)) return;
               const doc = await pack.getDocument(packId);
               if (!doc) return;
               const data = doc.toObject();
-              data.system.method = "prepared";
-              data.system.prepared = false;
-              await actor.createEmbeddedDocuments("Item", [data]);
+              data.system.preparation = { mode: "prepared", prepared: false };
+              pendingAddDocs.push(data);
+              pendingAddIds.add(packId);
               populateLearnList();
-              populateManagePanel();
             });
           });
         };
