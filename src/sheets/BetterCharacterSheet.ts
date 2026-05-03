@@ -677,6 +677,16 @@ export function createBetterCharacterSheet(): any {
       );
       this.element.classList.toggle("locked", !this.isEditable);
 
+      // Force resize handle to be visible and on top
+      const resizeHandle = this.element.querySelector(
+        ".window-resize-handle"
+      ) as HTMLElement;
+      if (resizeHandle) {
+        resizeHandle.style.zIndex = "30";
+        resizeHandle.style.width = "18px";
+        resizeHandle.style.height = "18px";
+      }
+
       // Apply DnD Beyond backdrop image to the header
       if (context.backdropUrl) {
         const header = this.element.querySelector(".bcs-header") as HTMLElement | null;

@@ -1752,6 +1752,12 @@ $radius-sm: 4px;
   .window-resize-handle {
     display: block !important;
     cursor: se-resize !important;
+    z-index: 30 !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    right: 0 !important;
+    width: 18px !important;
+    height: 18px !important;
   }
 
   // Override any Foundry/dnd5e table header coloring
