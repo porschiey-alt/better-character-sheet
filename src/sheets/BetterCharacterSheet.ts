@@ -1558,6 +1558,9 @@ export function createBetterCharacterSheet(): any {
           el.addEventListener("click", (e: Event) => {
             e.stopPropagation();
             e.preventDefault();
+            // Save scroll before the update triggers re-render
+            const tabContent = this.element?.querySelector(".bcs-tab-content") as HTMLElement;
+            if (tabContent) this._bcsScrollTop = tabContent.scrollTop;
             const itemEl = el.closest(
               "[data-item-id]"
             ) as HTMLElement;
@@ -2071,11 +2074,11 @@ export function createBetterCharacterSheet(): any {
 
       // Restore scroll position after render
       const savedScrollTop = this._bcsScrollTop;
-      if (savedScrollTop) {
+      if (savedScrollTop > 0) {
         setTimeout(() => {
-          const newTabContent = this.element?.querySelector(".bcs-tab-content") as HTMLElement;
-          if (newTabContent) newTabContent.scrollTop = savedScrollTop;
-        }, 0);
+          const tc = this.element?.querySelector(".bcs-tab-content") as HTMLElement;
+          if (tc) tc.scrollTop = savedScrollTop;
+        }, 10);
       }
     }
 
