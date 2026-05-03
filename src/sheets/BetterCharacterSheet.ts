@@ -52,6 +52,8 @@ export function createBetterCharacterSheet(): any {
     // No sidebar tabs — we manage our own tab UI
     static TABS: never[] = [];
 
+    // Persist active tab across re-renders
+    _bcsActiveTab = "actions";
     /** @override */
     async _prepareContext(options: any) {
       const context = await super._prepareContext(options);
@@ -727,6 +729,19 @@ export function createBetterCharacterSheet(): any {
         }
       }
 
+      // Restore active tab from instance state
+      const savedTab = this._bcsActiveTab || "actions";
+      this.element
+        .querySelectorAll(".bcs-tab-btn")
+        .forEach((b: Element) => {
+          b.classList.toggle("active", (b as HTMLElement).dataset.bcsTab === savedTab);
+        });
+      this.element
+        .querySelectorAll(".bcs-tab-pane")
+        .forEach((p: Element) => {
+          p.classList.toggle("active", (p as HTMLElement).dataset.bcsTabPane === savedTab);
+        });
+
       // Tab switching
       this.element
         .querySelectorAll(".bcs-tab-btn")
@@ -734,6 +749,7 @@ export function createBetterCharacterSheet(): any {
           btn.addEventListener("click", (e: Event) => {
             const tab = (e.currentTarget as HTMLElement).dataset.bcsTab;
             if (!tab) return;
+            this._bcsActiveTab = tab;
             // Update active button
             this.element
               .querySelectorAll(".bcs-tab-btn")

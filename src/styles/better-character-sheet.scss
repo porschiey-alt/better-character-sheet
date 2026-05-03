@@ -1301,10 +1301,30 @@ $radius-sm: 4px;
   }
 
   .bcs-equip-check {
-    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 2px solid $border-color;
+    border-radius: 4px;
+    font-size: 14px;
     cursor: pointer;
-    color: $text-muted;
-    &.equipped { color: var(--bcs-accent); }
+    color: transparent;
+    background: transparent;
+    transition: all 0.15s;
+
+    &.equipped {
+      color: var(--bcs-accent);
+      border-color: var(--bcs-accent);
+      background: rgba($gold, 0.15);
+
+      &::after { content: "✓"; }
+    }
+
+    &:hover {
+      border-color: var(--bcs-accent-dim);
+    }
   }
 
   .bcs-inv-name-cell {
