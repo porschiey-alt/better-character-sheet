@@ -1190,6 +1190,36 @@ export function createBetterCharacterSheet(): any {
           }).length;
         };
 
+        // Pending prep changes — toggled locally, flushed on panel close
+        const pendingPrep = new Map<string, boolean>();
+
+        // Get effective prepared state (pending override or actual)
+        const isEffectivelyPrepared = (sp: any) => {
+          if (pendingPrep.has(sp.id)) return pendingPrep.get(sp.id);
+          return !!sp.system.preparation?.prepared;
+        };
+
+        // Count prepared including pending changes
+        const countPreparedWithPending = () => {
+          return [...actor.items].filter((i: any) => {
+            if (i.type !== "spell") return false;
+            if ((i.system.level ?? 0) === 0) return false;
+            const mode = i.system.preparation?.mode;
+            if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return false;
+            return isEffectivelyPrepared(i);
+          }).length;
+        };
+
+        // Flush all pending prep changes to Foundry
+        const flushPendingPrep = async () => {
+          if (pendingPrep.size === 0) return;
+          const updates = [...pendingPrep.entries()].map(([id, prepared]) => ({
+            _id: id, "system.preparation.prepared": prepared,
+          }));
+          pendingPrep.clear();
+          await actor.updateEmbeddedDocuments("Item", updates);
+        };
+
         // Build the manage panel spell list
         const populateManagePanel = () => {
           // Save scroll position before repopulating
@@ -1202,7 +1232,7 @@ export function createBetterCharacterSheet(): any {
             if (!grouped[lvl]) grouped[lvl] = [];
             grouped[lvl].push(sp);
           }
-          const prepCount = countPrepared();
+          const prepCount = countPreparedWithPending();
           const atMax = maxPrep > 0 && prepCount >= maxPrep;
 
           let html = `<div class="bcs-manage-prep-counter">Prepared: <strong>${prepCount}</strong> / <strong>${maxPrep}</strong></div>`;
@@ -1215,7 +1245,7 @@ export function createBetterCharacterSheet(): any {
               const isCantrip = lvl === 0;
               const prepMode = sp.system.preparation?.mode;
               const isAlwaysOn = prepMode === "always" || prepMode === "innate" || prepMode === "atwill" || prepMode === "pact";
-              const isPrepared = !!sp.system.preparation?.prepared;
+              const isPrepared = isEffectivelyPrepared(sp);
               const showToggle = !isCantrip && !isAlwaysOn;
               const checkedClass = isPrepared ? "prepared" : "";
               const disabledClass = !isPrepared && atMax && showToggle ? "disabled" : "";
@@ -1245,16 +1275,16 @@ export function createBetterCharacterSheet(): any {
           manageBody.innerHTML = html;
           manageBody.scrollTop = scrollTop;
 
-          // Bind prep toggles
+          // Bind prep toggles — local toggle, no server update
           manageBody.querySelectorAll(".bcs-manage-prep-check:not(.disabled)").forEach((el: Element) => {
-            el.addEventListener("click", async (e: Event) => {
+            el.addEventListener("click", (e: Event) => {
               e.stopPropagation();
               const itemId = (el as HTMLElement).dataset.itemId;
               if (!itemId) return;
-              const item = actor.items.get(itemId);
-              if (!item) return;
-              await item.update({ "system.preparation.prepared": !item.system.preparation?.prepared });
-              // Re-populate in place (don't close the panel)
+              const sp = actor.items.get(itemId);
+              if (!sp) return;
+              const currentlyPrepped = isEffectivelyPrepared(sp);
+              pendingPrep.set(itemId, !currentlyPrepped);
               populateManagePanel();
             });
             (el as HTMLElement).style.cursor = "pointer";
@@ -1329,14 +1359,15 @@ export function createBetterCharacterSheet(): any {
           managePanel.dataset.panel = "open";
         });
 
-        // Close panel
-        manageClose?.addEventListener("click", () => {
+        // Close panel — flush pending prep changes
+        manageClose?.addEventListener("click", async () => {
           managePanel.dataset.panel = "closed";
           this._bcsManagePanelOpen = false;
           this._bcsLearnPanelOpen = false;
           if (learnSection) learnSection.style.display = "none";
           if (learnBar) learnBar.style.display = "none";
           if (learnResults) learnResults.innerHTML = "";
+          await flushPendingPrep();
         });
 
         // Wizard: "Learn New Spells" toggle
