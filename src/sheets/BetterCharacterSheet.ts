@@ -1189,6 +1189,9 @@ export function createBetterCharacterSheet(): any {
 
         // Build the manage panel spell list
         const populateManagePanel = () => {
+          // Save scroll position before repopulating
+          const scrollTop = manageBody.scrollTop;
+
           const allSpells = [...actor.items].filter((i: any) => i.type === "spell");
           const grouped: Record<number, any[]> = {};
           for (const sp of allSpells) {
@@ -1237,6 +1240,7 @@ export function createBetterCharacterSheet(): any {
             html += `<div class="bcs-empty-state">No spells on this character</div>`;
           }
           manageBody.innerHTML = html;
+          manageBody.scrollTop = scrollTop;
 
           // Bind prep toggles
           manageBody.querySelectorAll(".bcs-manage-prep-check:not(.disabled)").forEach((el: Element) => {
