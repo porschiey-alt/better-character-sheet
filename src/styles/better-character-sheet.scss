@@ -2245,37 +2245,6 @@ $radius-sm: 4px;
     a { color: var(--bcs-accent); }
   }
 
-  .bcs-detail-swap-config {
-    padding: 8px 10px;
-    margin-bottom: 10px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid $border-color;
-    border-radius: 4px;
-  }
-
-  .bcs-swap-label {
-    display: block;
-    font-size: 0.6rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: $text-muted;
-    margin-bottom: 4px;
-  }
-
-  .bcs-swap-select {
-    width: 100%;
-    padding: 5px 8px;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid $border-color;
-    border-radius: 4px;
-    color: $text-primary;
-    font-size: 0.8rem;
-    outline: none;
-    &:focus { border-color: var(--bcs-accent); }
-    option { background: #1a1d24; }
-  }
-
   // ===== EMPTY STATE =====
   .bcs-empty-state {
     color: $text-muted;
