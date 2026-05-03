@@ -10,6 +10,7 @@ import {
   buildConditionTypes,
   buildCurrency,
   buildEncumbrance,
+  LEVEL_LABELS,
 } from "../helpers/data-transforms.ts";
 
 /**
@@ -160,19 +161,8 @@ export function createBetterCharacterSheet(): any {
           };
         });
 
-      // Spell level labels (used by both attacks and spells sections)
-      const levelLabels = [
-        "Cantrips",
-        "1st Level",
-        "2nd Level",
-        "3rd Level",
-        "4th Level",
-        "5th Level",
-        "6th Level",
-        "7th Level",
-        "8th Level",
-        "9th Level",
-      ];
+      // Spell level labels — imported from data-transforms (single source of truth)
+      const levelLabels = LEVEL_LABELS;
 
       // Build attacks from weapons AND attack spells
       const attacks: any[] = [];
