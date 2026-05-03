@@ -172,13 +172,16 @@ export function createBetterCharacterSheet(): any {
       const showManageSpells = !!spellcastingClass;
       const isWizard = spellcastingClass?.system?.identifier?.toLowerCase() === "wizard";
 
-      // Max prepared spells = spellcasting ability mod + class level (min 1)
+      // Max prepared spells — use dnd5e's computed value from the class
       let maxPreparedSpells = 0;
       if (spellcastingClass) {
-        const scAbility = spellcastingClass.system.spellcasting.ability;
-        const abilityMod = system.abilities?.[scAbility]?.mod ?? 0;
-        const classLevel = spellcastingClass.system.levels ?? 1;
-        maxPreparedSpells = Math.max(1, abilityMod + classLevel);
+        maxPreparedSpells = spellcastingClass.system.spellcasting?.preparation?.max ?? 0;
+        if (!maxPreparedSpells) {
+          const scAbility = spellcastingClass.system.spellcasting.ability;
+          const abilityMod = system.abilities?.[scAbility]?.mod ?? 0;
+          const classLevel = spellcastingClass.system.levels ?? 1;
+          maxPreparedSpells = Math.max(1, abilityMod + classLevel);
+        }
       }
 
       // Spell level labels (used by both attacks and spells sections)
@@ -1158,25 +1161,29 @@ export function createBetterCharacterSheet(): any {
         });
         const isWizardClass = castingClass?.system?.identifier?.toLowerCase() === "wizard";
 
-        // Max prepared spells
+        // Max prepared spells — use dnd5e's computed value from the class
         let maxPrep = 0;
         if (castingClass) {
-          const scAbility = castingClass.system.spellcasting.ability;
-          const abilMod = actor.system.abilities?.[scAbility]?.mod ?? 0;
-          const classLvl = castingClass.system.levels ?? 1;
-          maxPrep = Math.max(1, abilMod + classLvl);
+          maxPrep = castingClass.system.spellcasting?.preparation?.max ?? 0;
+          // Fallback to ability mod + level if system doesn't provide max
+          if (!maxPrep) {
+            const scAbility = castingClass.system.spellcasting.ability;
+            const abilMod = actor.system.abilities?.[scAbility]?.mod ?? 0;
+            const classLvl = castingClass.system.levels ?? 1;
+            maxPrep = Math.max(1, abilMod + classLvl);
+          }
         }
 
-        // Count currently prepared spells (non-cantrip, non-always)
         // Count prepared spells that count against the max.
-        // Excludes cantrips and always-on spells (always/innate/atwill/pact).
+        // Uses preparation.mode to distinguish user-prepared from always-on.
+        // Excludes cantrips and always-on spells.
         const countPrepared = () => {
           return [...actor.items].filter((i: any) => {
             if (i.type !== "spell") return false;
             if ((i.system.level ?? 0) === 0) return false;
-            const m = i.system.method;
-            if (m === "always" || m === "innate" || m === "atwill" || m === "pact") return false;
-            return !!i.system.prepared;
+            const mode = i.system.preparation?.mode;
+            if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return false;
+            return !!i.system.preparation?.prepared;
           }).length;
         };
 
@@ -1200,13 +1207,13 @@ export function createBetterCharacterSheet(): any {
             html += `<div class="bcs-manage-level-label">${lvlLabels[lvl] || `Level ${lvl}`}</div>`;
             for (const sp of spells) {
               const isCantrip = lvl === 0;
-              const method = sp.system.method;
-              const isAlwaysOn = method === "always" || method === "innate" || method === "atwill" || method === "pact";
-              const isPrepared = !!sp.system.prepared;
+              const prepMode = sp.system.preparation?.mode;
+              const isAlwaysOn = prepMode === "always" || prepMode === "innate" || prepMode === "atwill" || prepMode === "pact";
+              const isPrepared = !!sp.system.preparation?.prepared;
               const showToggle = !isCantrip && !isAlwaysOn;
               const checkedClass = isPrepared ? "prepared" : "";
               const disabledClass = !isPrepared && atMax && showToggle ? "disabled" : "";
-              const alwaysLabel = isCantrip ? "Always" : isAlwaysOn ? method.charAt(0).toUpperCase() + method.slice(1) : "";
+              const alwaysLabel = isCantrip ? "Always" : isAlwaysOn ? "Always" : "";
               const ritual = sp.system.properties?.has?.("ritual");
 
               html += `<div class="bcs-manage-spell-row" data-item-id="${sp.id}">`;
@@ -1239,7 +1246,7 @@ export function createBetterCharacterSheet(): any {
               if (!itemId) return;
               const item = actor.items.get(itemId);
               if (!item) return;
-              await item.update({ "system.prepared": !item.system.prepared });
+              await item.update({ "system.preparation.prepared": !item.system.preparation?.prepared });
               // Re-populate in place (don't close the panel)
               populateManagePanel();
             });
@@ -1276,6 +1283,37 @@ export function createBetterCharacterSheet(): any {
 
         // Open panel
         this.element.querySelector(".bcs-manage-spells-btn")?.addEventListener("click", () => {
+          // Debug: log all spells and their prep state
+          const allSpells = [...actor.items].filter((i: any) => i.type === "spell");
+          console.group("BCS Spell Debug — all spells on actor");
+          for (const sp of allSpells) {
+            console.log(
+              `[${sp.system.level ?? 0}] ${sp.name}`,
+              `| method="${sp.system.method}"`,
+              `| prepared=${sp.system.prepared}`,
+              `| preparation=`, sp.system.preparation,
+              `| properties=`, sp.system.properties ? [...sp.system.properties] : "none",
+            );
+          }
+          console.log(`Prep count: ${countPrepared()} / ${maxPrep}`);
+          // Log actor-level spell data to find max prepared field
+          console.log("actor.system.attributes.spellcasting =", actor.system.attributes?.spellcasting);
+          console.log("actor.system.spells =", actor.system.spells);
+          console.log("actor.system.attributes.spell =", actor.system.attributes?.spell);
+          // Log spellcasting class info
+          if (castingClass) {
+            console.log("castingClass.system.spellcasting =", castingClass.system.spellcasting);
+            console.log("castingClass.system.spellcasting.preparation =", castingClass.system.spellcasting?.preparation);
+            console.log("castingClass.system.levels =", castingClass.system.levels);
+          }
+          // Search for prepared/max on the actor
+          console.log("actor.system.attributes.spell =", actor.system.attributes?.spell);
+          console.log("actor.system.details.level =", actor.system.details?.level);
+          // Also log cantrips known count
+          const cantripCount = [...actor.items].filter((i: any) => i.type === "spell" && (i.system.level ?? 0) === 0).length;
+          console.log(`Cantrips: ${cantripCount}`);
+          console.groupEnd();
+
           populateManagePanel();
           if (isWizardClass && learnBar) learnBar.style.display = "";
           this._bcsManagePanelOpen = true;
