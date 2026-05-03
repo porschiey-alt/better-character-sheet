@@ -49,16 +49,19 @@
     <div class="bcs-death-saves">
       <span class="bcs-ds-label">Successes:</span>
       <span class="bcs-ds-pips">
-        <span class="bcs-ds-pip {{#if system.attributes.death.success}}success{{/if}}">●</span>
-        <span class="bcs-ds-pip {{#if (gte system.attributes.death.success 2)}}success{{/if}}">●</span>
-        <span class="bcs-ds-pip {{#if (gte system.attributes.death.success 3)}}success{{/if}}">●</span>
+        <span class="bcs-ds-pip {{#if system.attributes.death.success}}success{{/if}}" data-ds-type="success" data-ds-index="1">●</span>
+        <span class="bcs-ds-pip {{#if (gte system.attributes.death.success 2)}}success{{/if}}" data-ds-type="success" data-ds-index="2">●</span>
+        <span class="bcs-ds-pip {{#if (gte system.attributes.death.success 3)}}success{{/if}}" data-ds-type="success" data-ds-index="3">●</span>
       </span>
       <span class="bcs-ds-label">Failures:</span>
       <span class="bcs-ds-pips">
-        <span class="bcs-ds-pip {{#if system.attributes.death.failure}}failure{{/if}}">●</span>
-        <span class="bcs-ds-pip {{#if (gte system.attributes.death.failure 2)}}failure{{/if}}">●</span>
-        <span class="bcs-ds-pip {{#if (gte system.attributes.death.failure 3)}}failure{{/if}}">●</span>
+        <span class="bcs-ds-pip {{#if system.attributes.death.failure}}failure{{/if}}" data-ds-type="failure" data-ds-index="1">●</span>
+        <span class="bcs-ds-pip {{#if (gte system.attributes.death.failure 2)}}failure{{/if}}" data-ds-type="failure" data-ds-index="2">●</span>
+        <span class="bcs-ds-pip {{#if (gte system.attributes.death.failure 3)}}failure{{/if}}" data-ds-type="failure" data-ds-index="3">●</span>
       </span>
+      <button type="button" class="bcs-ds-roll-btn" title="Roll Death Save">
+        <i class="fas fa-dice-d20"></i>
+      </button>
     </div>
   </div>
 </div>

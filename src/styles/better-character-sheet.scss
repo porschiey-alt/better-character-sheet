@@ -1512,8 +1512,59 @@ $radius-sm: 4px;
   .bcs-ds-pip {
     color: $border-color;
     font-size: 0.85rem;
-    &.success { color: $green; }
-    &.failure { color: $red; }
+    &.success { color: $green; cursor: pointer; &:hover { opacity: 0.7; } }
+    &.failure { color: $red; cursor: pointer; &:hover { opacity: 0.7; } }
+  }
+
+  .bcs-ds-roll-btn {
+    background: transparent;
+    border: 1px solid $border-color;
+    border-radius: $radius-sm;
+    color: $text-secondary;
+    cursor: pointer;
+    padding: 2px 6px;
+    font-size: 0.8rem;
+    transition: all 0.15s;
+    margin-left: 4px;
+
+    &:hover {
+      color: var(--bcs-accent);
+      border-color: var(--bcs-accent-dim);
+    }
+  }
+
+  // ===== INLINE DEATH SAVES (shown near HP when HP=0) =====
+  .bcs-death-saves-inline {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid $red;
+    border-radius: $radius;
+    background: rgba($red, 0.08);
+    padding: 4px 10px;
+    gap: 2px;
+
+    .bcs-ds-inline-label {
+      font-size: 0.55rem;
+      font-weight: 700;
+      color: $red;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .bcs-death-saves {
+      gap: 4px;
+    }
+
+    .bcs-ds-label {
+      font-size: 0.7rem;
+    }
+
+    .bcs-ds-pip {
+      font-size: 0.75rem;
+      cursor: pointer;
+      &:hover { opacity: 0.7; }
+    }
   }
 
   // ===== TRUNCATED DESCRIPTIONS =====
@@ -1602,6 +1653,124 @@ $radius-sm: 4px;
     text-align: center;
     padding: 20px;
     font-size: 0.85rem;
+  }
+
+  // ===== SHARED SLIDE-OUT PANEL STYLES (Currency, HP) =====
+  .bcs-currency-panel,
+  .bcs-hp-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 280px;
+    height: 100%;
+    background: var(--bcs-bg-card);
+    border-left: 2px solid var(--bcs-accent-dim);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.2s ease;
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.5);
+
+    &[data-panel="open"] {
+      transform: translateX(0);
+    }
+  }
+
+  .bcs-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid $border-color;
+    flex-shrink: 0;
+
+    button {
+      background: transparent;
+      border: none;
+      color: $text-muted;
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 4px;
+      &:hover { color: $text-primary; }
+    }
+  }
+
+  .bcs-panel-title {
+    color: var(--bcs-accent);
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0;
+
+    i { margin-right: 6px; }
+  }
+
+  .bcs-panel-body {
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .bcs-currency-row,
+  .bcs-hp-edit-row {
+    margin-bottom: 14px;
+
+    label {
+      display: block;
+      color: $text-secondary;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid $border-color;
+      border-radius: $radius;
+      background: $bg-input;
+      color: $text-primary;
+      font-size: 1rem;
+      font-weight: 600;
+      outline: none;
+      box-sizing: border-box;
+
+      -moz-appearance: textfield;
+      &::-webkit-outer-spin-button,
+      &::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+      &:focus {
+        border-color: var(--bcs-accent-dim);
+        background: lighten($bg-input, 5%);
+      }
+    }
+  }
+
+  .bcs-panel-apply {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: $radius;
+    background: var(--bcs-accent);
+    color: $bg-dark;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 8px;
+
+    &:hover {
+      background: lighten($gold, 8%);
+    }
+  }
+
+  // Make gold display clickable
+  .bcs-inv-gold {
+    cursor: pointer;
+    transition: all 0.15s;
+    &:hover { color: var(--bcs-accent); }
   }
 
   // ===== THEME PANEL =====

@@ -59,6 +59,34 @@
           </div>
         </div>
       </div>
+
+      {{!-- Death Saves — visible when HP is 0 --}}
+      {{#if showDeathSaves}}
+      <div class="bcs-death-saves-inline">
+        <div class="bcs-ds-inline-label">Death Saves</div>
+        <div class="bcs-death-saves">
+          <span class="bcs-ds-label">
+            <i class="fas fa-check"></i>
+          </span>
+          <span class="bcs-ds-pips">
+            <span class="bcs-ds-pip {{#if system.attributes.death.success}}success{{/if}}" data-ds-type="success" data-ds-index="1">●</span>
+            <span class="bcs-ds-pip {{#if (gte system.attributes.death.success 2)}}success{{/if}}" data-ds-type="success" data-ds-index="2">●</span>
+            <span class="bcs-ds-pip {{#if (gte system.attributes.death.success 3)}}success{{/if}}" data-ds-type="success" data-ds-index="3">●</span>
+          </span>
+          <span class="bcs-ds-label">
+            <i class="fas fa-times"></i>
+          </span>
+          <span class="bcs-ds-pips">
+            <span class="bcs-ds-pip {{#if system.attributes.death.failure}}failure{{/if}}" data-ds-type="failure" data-ds-index="1">●</span>
+            <span class="bcs-ds-pip {{#if (gte system.attributes.death.failure 2)}}failure{{/if}}" data-ds-type="failure" data-ds-index="2">●</span>
+            <span class="bcs-ds-pip {{#if (gte system.attributes.death.failure 3)}}failure{{/if}}" data-ds-type="failure" data-ds-index="3">●</span>
+          </span>
+          <button type="button" class="bcs-ds-roll-btn" title="Roll Death Save">
+            <i class="fas fa-dice-d20"></i>
+          </button>
+        </div>
+      </div>
+      {{/if}}
     </div>
   </div>
 
@@ -143,6 +171,60 @@
       <button type="button" class="bcs-detail-close"><i class="fas fa-times"></i></button>
     </div>
     <div class="bcs-detail-body"></div>
+  </div>
+
+  {{!-- Currency editing panel --}}
+  <div class="bcs-currency-panel" data-panel="closed">
+    <div class="bcs-panel-header">
+      <h3 class="bcs-panel-title"><i class="fas fa-coins"></i> Currency</h3>
+      <button type="button" class="bcs-currency-close"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="bcs-panel-body">
+      <div class="bcs-currency-row">
+        <label>Platinum (PP)</label>
+        <input type="number" class="bcs-currency-input" data-currency="pp" value="{{currency.pp}}" min="0" />
+      </div>
+      <div class="bcs-currency-row">
+        <label>Gold (GP)</label>
+        <input type="number" class="bcs-currency-input" data-currency="gp" value="{{currency.gp}}" min="0" />
+      </div>
+      <div class="bcs-currency-row">
+        <label>Electrum (EP)</label>
+        <input type="number" class="bcs-currency-input" data-currency="ep" value="{{currency.ep}}" min="0" />
+      </div>
+      <div class="bcs-currency-row">
+        <label>Silver (SP)</label>
+        <input type="number" class="bcs-currency-input" data-currency="sp" value="{{currency.sp}}" min="0" />
+      </div>
+      <div class="bcs-currency-row">
+        <label>Copper (CP)</label>
+        <input type="number" class="bcs-currency-input" data-currency="cp" value="{{currency.cp}}" min="0" />
+      </div>
+      <button type="button" class="bcs-panel-apply bcs-currency-apply">Apply</button>
+    </div>
+  </div>
+
+  {{!-- HP editing panel --}}
+  <div class="bcs-hp-panel" data-panel="closed">
+    <div class="bcs-panel-header">
+      <h3 class="bcs-panel-title"><i class="fas fa-heart"></i> Hit Points</h3>
+      <button type="button" class="bcs-hp-panel-close"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="bcs-panel-body">
+      <div class="bcs-hp-edit-row">
+        <label>Current HP</label>
+        <input type="number" class="bcs-hp-edit-input" data-hp-field="value" value="{{system.attributes.hp.value}}" min="0" />
+      </div>
+      <div class="bcs-hp-edit-row">
+        <label>Max HP</label>
+        <input type="number" class="bcs-hp-edit-input" data-hp-field="max" value="{{system.attributes.hp.max}}" min="0" />
+      </div>
+      <div class="bcs-hp-edit-row">
+        <label>Temp HP</label>
+        <input type="number" class="bcs-hp-edit-input" data-hp-field="temp" value="{{system.attributes.hp.temp}}" min="0" />
+      </div>
+      <button type="button" class="bcs-panel-apply bcs-hp-panel-apply">Apply</button>
+    </div>
   </div>
 
   {{!-- Theme settings button (bottom-left) --}}

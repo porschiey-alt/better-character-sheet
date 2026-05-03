@@ -175,6 +175,19 @@ export function createBetterCharacterSheet(): any {
 
       // Weapons — only equipped
       for (const i of actor.items.filter((i: any) => i.type === "weapon" && i.system.equipped)) {
+        // Resolve formula references like @mod, @abilities.str.mod
+        let dmgFormula = i.system.damage?.base?.formula || "0";
+        const rollData = i.getRollData?.() || {};
+        dmgFormula = dmgFormula.replace(/@([a-zA-Z0-9_.]+)/g, (_: string, path: string) => {
+          const parts = path.split(".");
+          let val: any = rollData;
+          for (const p of parts) {
+            val = val?.[p];
+            if (val === undefined) break;
+          }
+          return val !== undefined ? String(val) : "0";
+        });
+
         attacks.push({
           id: i.id,
           name: i.name,
@@ -187,7 +200,7 @@ export function createBetterCharacterSheet(): any {
           toHit: i.system.attack?.flat != null
             ? `+${i.system.attack.flat}`
             : "—",
-          damage: i.system.damage?.base?.formula || "0",
+          damage: dmgFormula,
           notes: "",
         });
       }
@@ -555,6 +568,18 @@ export function createBetterCharacterSheet(): any {
       ];
       const hasFeatures = featureGroups.some((g) => g.items.length > 0);
 
+      // Death saves — show when HP is 0
+      const showDeathSaves = (system.attributes?.hp?.value ?? 1) === 0;
+
+      // Currency data for editing panel
+      const currency = {
+        pp: system.currency?.pp ?? 0,
+        gp: system.currency?.gp ?? 0,
+        ep: system.currency?.ep ?? 0,
+        sp: system.currency?.sp ?? 0,
+        cp: system.currency?.cp ?? 0,
+      };
+
       // Resistances/Immunities for extras tab
       const dr = system.traits?.dr;
       const di = system.traits?.di;
@@ -600,6 +625,8 @@ export function createBetterCharacterSheet(): any {
         conditionImmunities,
         conditions,
         hasDefenses,
+        showDeathSaves,
+        currency,
         backdropUrl,
         themeAccent: actor.getFlag("better-character-sheet", "themeAccent") || "#c8a85c",
         themeBg: actor.getFlag("better-character-sheet", "themeBg") || "#12151a",
@@ -861,14 +888,34 @@ export function createBetterCharacterSheet(): any {
           (el as HTMLElement).style.cursor = "pointer";
         });
 
-      // 5. Death saves — click death save pips (in extras tab)
+      // 5. Death saves — click individual pips to toggle values
       this.element
-        .querySelectorAll(".bcs-death-saves")
+        .querySelectorAll(".bcs-ds-pip[data-ds-type]")
+        .forEach((el: Element) => {
+          el.addEventListener("click", (e: Event) => {
+            e.stopPropagation();
+            const pipEl = el as HTMLElement;
+            const type = pipEl.dataset.dsType; // "success" or "failure"
+            const idx = parseInt(pipEl.dataset.dsIndex || "0", 10);
+            if (!type) return;
+            const key = type === "success" ? "success" : "failure";
+            const current = actor.system.attributes.death[key] ?? 0;
+            // If clicking at/below current value, set to index-1; otherwise set to index
+            const newVal = current >= idx ? idx - 1 : idx;
+            actor.update({
+              [`system.attributes.death.${key}`]: Math.max(0, Math.min(3, newVal)),
+            });
+          });
+          (el as HTMLElement).style.cursor = "pointer";
+        });
+
+      // Death save roll button
+      this.element
+        .querySelectorAll(".bcs-ds-roll-btn")
         .forEach((el: Element) => {
           el.addEventListener("click", (e: Event) => {
             actor.rollDeathSave({ event: e, legacy: false });
           });
-          (el as HTMLElement).style.cursor = "pointer";
         });
 
       // 6 & 7. Attack/spell rolls — click attack row or spell row to use the item
@@ -1065,18 +1112,78 @@ export function createBetterCharacterSheet(): any {
         .forEach((el: Element) => {
           el.addEventListener("click", (e: Event) => {
             e.stopPropagation();
+            e.preventDefault();
             const row = el.closest("[data-item-id]") as HTMLElement;
             const itemId = row?.dataset.itemId;
             if (!itemId) return;
             const item = actor.items.get(itemId);
-            if (item) {
-              item.update({
-                "system.equipped": !item.system.equipped,
-              });
-            }
+            if (!item) return;
+            const current = typeof item.system.equipped === "object"
+              ? item.system.equipped?.value
+              : item.system.equipped;
+            item.update({ "system.equipped": !current });
           });
           (el as HTMLElement).style.cursor = "pointer";
         });
+
+      // ========================================
+      // CURRENCY PANEL
+      // ========================================
+      const currencyPanel = this.element.querySelector(".bcs-currency-panel") as HTMLElement;
+      const currencyClose = this.element.querySelector(".bcs-currency-close");
+      const currencyApply = this.element.querySelector(".bcs-currency-apply");
+
+      this.element.querySelectorAll(".bcs-inv-gold").forEach((el: Element) => {
+        el.addEventListener("click", () => {
+          if (currencyPanel) currencyPanel.dataset.panel = "open";
+        });
+        (el as HTMLElement).style.cursor = "pointer";
+      });
+
+      currencyClose?.addEventListener("click", () => {
+        if (currencyPanel) currencyPanel.dataset.panel = "closed";
+      });
+
+      currencyApply?.addEventListener("click", () => {
+        const updates: Record<string, number> = {};
+        this.element.querySelectorAll(".bcs-currency-input").forEach((input: Element) => {
+          const inp = input as HTMLInputElement;
+          const denom = inp.dataset.currency;
+          if (denom) updates[`system.currency.${denom}`] = Math.max(0, parseInt(inp.value, 10) || 0);
+        });
+        actor.update(updates);
+        if (currencyPanel) currencyPanel.dataset.panel = "closed";
+      });
+
+      // ========================================
+      // HP EDITING PANEL
+      // ========================================
+      const hpPanel = this.element.querySelector(".bcs-hp-panel") as HTMLElement;
+      const hpPanelClose = this.element.querySelector(".bcs-hp-panel-close");
+      const hpPanelApply = this.element.querySelector(".bcs-hp-panel-apply");
+
+      this.element.querySelectorAll(".bcs-hp-info").forEach((el: Element) => {
+        el.addEventListener("click", () => {
+          if (hpPanel) hpPanel.dataset.panel = "open";
+        });
+        (el as HTMLElement).style.cursor = "pointer";
+      });
+
+      hpPanelClose?.addEventListener("click", () => {
+        if (hpPanel) hpPanel.dataset.panel = "closed";
+      });
+
+      hpPanelApply?.addEventListener("click", () => {
+        const hpCur = this.element.querySelector('.bcs-hp-edit-input[data-hp-field="value"]') as HTMLInputElement;
+        const hpMax = this.element.querySelector('.bcs-hp-edit-input[data-hp-field="max"]') as HTMLInputElement;
+        const hpTemp = this.element.querySelector('.bcs-hp-edit-input[data-hp-field="temp"]') as HTMLInputElement;
+        const updates: Record<string, number> = {};
+        if (hpCur) updates["system.attributes.hp.value"] = Math.max(0, parseInt(hpCur.value, 10) || 0);
+        if (hpMax) updates["system.attributes.hp.max"] = Math.max(0, parseInt(hpMax.value, 10) || 0);
+        if (hpTemp) updates["system.attributes.hp.temp"] = Math.max(0, parseInt(hpTemp.value, 10) || 0);
+        actor.update(updates);
+        if (hpPanel) hpPanel.dataset.panel = "closed";
+      });
 
       // ========================================
       // THEME CUSTOMIZATION
