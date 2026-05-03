@@ -653,6 +653,7 @@ export function createBetterCharacterSheet(): any {
       const val = parseInt(input?.value || "0", 10);
       if (val > 0) {
         this.document.applyDamage(-val);
+        this.document.update({ "system.attributes.death.success": 0, "system.attributes.death.failure": 0 });
         if (input) input.value = "";
       }
     }
@@ -943,6 +944,7 @@ export function createBetterCharacterSheet(): any {
             e.stopPropagation();
             e.preventDefault();
             actor.applyDamage(-1);
+            actor.update({ "system.attributes.death.success": 0, "system.attributes.death.failure": 0 });
           });
         });
 
@@ -978,6 +980,7 @@ export function createBetterCharacterSheet(): any {
             const val = parseInt(hpInput?.value || "0", 10);
             if (val > 0) {
               actor.applyDamage(-val);
+              actor.update({ "system.attributes.death.success": 0, "system.attributes.death.failure": 0 });
               if (hpInput) hpInput.value = "";
             }
           });
