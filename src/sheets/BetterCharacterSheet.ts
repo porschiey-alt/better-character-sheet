@@ -894,23 +894,46 @@ export function createBetterCharacterSheet(): any {
           });
         });
 
-      // 6 & 7. Attack/spell rolls — click attack row or spell row to use the item
+      // 6. Attack rolls — click attack row to use the item
       this.element
         .querySelectorAll(
-          ".bcs-attack-row[data-item-id], .bcs-spell-row[data-item-id]"
+          ".bcs-attack-row[data-item-id]"
         )
         .forEach((el: Element) => {
           el.addEventListener("click", (e: Event) => {
             const itemId = (el as HTMLElement).dataset.itemId;
             const item = actor.items.get(itemId);
             if (!item) return;
-            // Use the first activity, or fall back to item.use()
             const activity = item.system.activities?.values()?.next()?.value;
             if (activity) {
               activity.use({ event: e, legacy: false });
             } else {
               item.use({ event: e, legacy: false });
             }
+          });
+          (el as HTMLElement).style.cursor = "pointer";
+        });
+
+      // 7. Spell rows — click to open detail panel with description + cast button
+      this.element
+        .querySelectorAll(".bcs-spell-row[data-item-id]")
+        .forEach((el: Element) => {
+          el.addEventListener("click", () => {
+            const itemId = (el as HTMLElement).dataset.itemId;
+            const item = actor.items.get(itemId);
+            if (!item) return;
+            const panel = this.element.querySelector(".bcs-detail-panel") as HTMLElement;
+            const panelTitle = this.element.querySelector(".bcs-detail-title") as HTMLElement;
+            const panelBody = this.element.querySelector(".bcs-detail-body") as HTMLElement;
+            const panelActions = this.element.querySelector(".bcs-detail-actions") as HTMLElement;
+            const castBtn = this.element.querySelector(".bcs-detail-cast-btn") as HTMLElement;
+            if (!panel || !panelTitle || !panelBody) return;
+            panelTitle.textContent = item.name;
+            panelBody.innerHTML = item.system.description?.value || "";
+            // Show cast button and bind to this spell
+            if (panelActions) panelActions.style.display = "";
+            if (castBtn) castBtn.dataset.itemId = item.id;
+            panel.dataset.panel = "open";
           });
           (el as HTMLElement).style.cursor = "pointer";
         });
@@ -1323,8 +1346,15 @@ export function createBetterCharacterSheet(): any {
         ".bcs-detail-body"
       ) as HTMLElement;
       const panelClose = this.element.querySelector(".bcs-detail-close");
+      const panelActions = this.element.querySelector(
+        ".bcs-detail-actions"
+      ) as HTMLElement;
+      const castBtn = this.element.querySelector(
+        ".bcs-detail-cast-btn"
+      ) as HTMLElement;
 
       if (panel && panelTitle && panelBody) {
+        // Feature descriptions — hide cast button
         this.element
           .querySelectorAll(
             ".bcs-feature-desc-truncated, .bcs-action-feature-desc-truncated"
@@ -1337,12 +1367,32 @@ export function createBetterCharacterSheet(): any {
               panelTitle.textContent = item.name;
               panelBody.innerHTML =
                 item.system.description?.value || "";
+              if (panelActions) panelActions.style.display = "none";
+              if (castBtn) delete castBtn.dataset.itemId;
               panel.dataset.panel = "open";
             });
           });
 
+        // Cast button — use the spell stored by item id
+        if (castBtn) {
+          castBtn.addEventListener("click", (e: Event) => {
+            const itemId = castBtn.dataset.itemId;
+            if (!itemId) return;
+            const item = actor.items.get(itemId);
+            if (!item) return;
+            const activity = item.system.activities?.values()?.next()?.value;
+            if (activity) {
+              activity.use({ event: e, legacy: false });
+            } else {
+              item.use({ event: e, legacy: false });
+            }
+          });
+        }
+
         panelClose?.addEventListener("click", () => {
           panel.dataset.panel = "closed";
+          if (panelActions) panelActions.style.display = "none";
+          if (castBtn) delete castBtn.dataset.itemId;
         });
       }
 

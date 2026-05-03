@@ -1214,7 +1214,16 @@ $radius-sm: 4px;
 
   .bcs-spell-name-cell {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .bcs-spell-icon-img {
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    flex-shrink: 0;
   }
 
   .bcs-spell-name {
@@ -1769,6 +1778,29 @@ $radius-sm: 4px;
     padding: 4px;
 
     &:hover { color: $text-primary; }
+  }
+
+  .bcs-detail-actions {
+    padding: 8px 14px;
+    border-bottom: 1px solid $border-color;
+    flex-shrink: 0;
+  }
+
+  .bcs-detail-cast-btn {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bcs-accent);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    i { margin-right: 4px; }
+
+    &:hover { filter: brightness(1.15); }
   }
 
   .bcs-detail-body {

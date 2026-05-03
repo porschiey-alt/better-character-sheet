@@ -194,8 +194,28 @@ describe("isSpellAvailable", () => {
     expect(isSpellAvailable({ system: { level: 1, method: "prepared", prepared: false } })).toBe(false);
   });
 
-  it("unknown method defaults to available", () => {
-    expect(isSpellAvailable({ system: { level: 1, method: "something-else" } })).toBe(true);
+  it("unknown method with prepared true is available", () => {
+    expect(isSpellAvailable({ system: { level: 1, method: "something-else", prepared: true } })).toBe(true);
+  });
+
+  it("unknown method with prepared false is unavailable", () => {
+    expect(isSpellAvailable({ system: { level: 1, method: "something-else", prepared: false } })).toBe(false);
+  });
+
+  it("unknown method with no prepared flag is unavailable", () => {
+    expect(isSpellAvailable({ system: { level: 1, method: "something-else" } })).toBe(false);
+  });
+
+  it("no method with prepared true is available", () => {
+    expect(isSpellAvailable({ system: { level: 1, prepared: true } })).toBe(true);
+  });
+
+  it("no method with prepared false is unavailable", () => {
+    expect(isSpellAvailable({ system: { level: 1, prepared: false } })).toBe(false);
+  });
+
+  it("no method with no prepared flag is unavailable", () => {
+    expect(isSpellAvailable({ system: { level: 1 } })).toBe(false);
   });
 });
 
