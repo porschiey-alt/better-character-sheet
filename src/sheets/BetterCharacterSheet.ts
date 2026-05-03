@@ -2069,14 +2069,13 @@ export function createBetterCharacterSheet(): any {
         hookData
       );
 
-      // Restore scroll position after render (double-rAF to ensure layout is complete)
-      const newTabContent = this.element.querySelector(".bcs-tab-content") as HTMLElement;
-      if (newTabContent && this._bcsScrollTop) {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            newTabContent.scrollTop = this._bcsScrollTop;
-          });
-        });
+      // Restore scroll position after render
+      const savedScrollTop = this._bcsScrollTop;
+      if (savedScrollTop) {
+        setTimeout(() => {
+          const newTabContent = this.element?.querySelector(".bcs-tab-content") as HTMLElement;
+          if (newTabContent) newTabContent.scrollTop = savedScrollTop;
+        }, 0);
       }
     }
 
