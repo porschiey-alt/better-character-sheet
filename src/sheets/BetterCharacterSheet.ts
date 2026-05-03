@@ -68,6 +68,9 @@ export function createBetterCharacterSheet(): any {
     _bcsActiveTab = "actions";
     // Persist scroll position across re-renders
     _bcsScrollTop = 0;
+    // Persist manage panel state across re-renders
+    _bcsManagePanelOpen = false;
+    _bcsLearnPanelOpen = false;
 
     /** @override — save scroll position before DOM is replaced */
     async _preRender(context: any, options: any) {
@@ -168,6 +171,15 @@ export function createBetterCharacterSheet(): any {
       });
       const showManageSpells = !!spellcastingClass;
       const isWizard = spellcastingClass?.system?.identifier?.toLowerCase() === "wizard";
+
+      // Max prepared spells = spellcasting ability mod + class level (min 1)
+      let maxPreparedSpells = 0;
+      if (spellcastingClass) {
+        const scAbility = spellcastingClass.system.spellcasting.ability;
+        const abilityMod = system.abilities?.[scAbility]?.mod ?? 0;
+        const classLevel = spellcastingClass.system.levels ?? 1;
+        maxPreparedSpells = Math.max(1, abilityMod + classLevel);
+      }
 
       // Spell level labels (used by both attacks and spells sections)
       const levelLabels = [
@@ -569,6 +581,7 @@ export function createBetterCharacterSheet(): any {
         spellsByLevel,
         showManageSpells,
         isWizard,
+        maxPreparedSpells,
         inventoryGroups,
         hasInventory,
         encumbrance,
@@ -1126,22 +1139,44 @@ export function createBetterCharacterSheet(): any {
       const managePanel = this.element.querySelector(".bcs-manage-panel") as HTMLElement;
       const manageBody = this.element.querySelector(".bcs-manage-body") as HTMLElement;
       const manageClose = this.element.querySelector(".bcs-manage-close");
-      const wizardAddSection = this.element.querySelector(".bcs-manage-wizard-add") as HTMLElement;
-      const manageSearch = this.element.querySelector(".bcs-manage-search") as HTMLInputElement;
-      const manageLevelFilter = this.element.querySelector(".bcs-manage-level-filter") as HTMLSelectElement;
-      const searchResults = this.element.querySelector(".bcs-manage-search-results") as HTMLElement;
+      const learnSection = this.element.querySelector(".bcs-manage-wizard-add") as HTMLElement;
+      const learnSearch = this.element.querySelector(".bcs-manage-search") as HTMLInputElement;
+      const learnLevelFilter = this.element.querySelector(".bcs-manage-level-filter") as HTMLSelectElement;
+      const learnResults = this.element.querySelector(".bcs-manage-search-results") as HTMLElement;
+      const learnBar = this.element.querySelector(".bcs-manage-learn-bar") as HTMLElement;
+      const learnToggleBtn = this.element.querySelector(".bcs-manage-learn-toggle") as HTMLElement;
 
       if (managePanel && manageBody) {
-        const levelLabelsShort = ["Cantrips", "1st Level", "2nd Level", "3rd Level", "4th Level",
+        const lvlLabels = ["Cantrips", "1st Level", "2nd Level", "3rd Level", "4th Level",
           "5th Level", "6th Level", "7th Level", "8th Level", "9th Level"];
 
         // Detect caster type from context
-        const preparedCasterIds = new Set(["wizard", "cleric", "druid", "paladin"]);
+        const prepCasterIds = new Set(["wizard", "cleric", "druid", "paladin"]);
         const castingClass = actor.items?.find((i: any) => {
           const id = i.system?.identifier?.toLowerCase();
-          return i.type === "class" && id && preparedCasterIds.has(id) && i.system?.spellcasting?.ability;
+          return i.type === "class" && id && prepCasterIds.has(id) && i.system?.spellcasting?.ability;
         });
         const isWizardClass = castingClass?.system?.identifier?.toLowerCase() === "wizard";
+
+        // Max prepared spells
+        let maxPrep = 0;
+        if (castingClass) {
+          const scAbility = castingClass.system.spellcasting.ability;
+          const abilMod = actor.system.abilities?.[scAbility]?.mod ?? 0;
+          const classLvl = castingClass.system.levels ?? 1;
+          maxPrep = Math.max(1, abilMod + classLvl);
+        }
+
+        // Count currently prepared spells (non-cantrip, non-always)
+        const countPrepared = () => {
+          return [...actor.items].filter((i: any) => {
+            if (i.type !== "spell") return false;
+            if ((i.system.level ?? 0) === 0) return false;
+            const m = i.system.method;
+            if (m === "always" || m === "innate" || m === "atwill" || m === "pact") return false;
+            return !!i.system.prepared;
+          }).length;
+        };
 
         // Build the manage panel spell list
         const populateManagePanel = () => {
@@ -1152,12 +1187,15 @@ export function createBetterCharacterSheet(): any {
             if (!grouped[lvl]) grouped[lvl] = [];
             grouped[lvl].push(sp);
           }
-          let html = "";
+          const prepCount = countPrepared();
+          const atMax = maxPrep > 0 && prepCount >= maxPrep;
+
+          let html = `<div class="bcs-manage-prep-counter">Prepared: <strong>${prepCount}</strong> / <strong>${maxPrep}</strong></div>`;
           const sortedLevels = Object.keys(grouped).map(Number).sort((a, b) => a - b);
           for (const lvl of sortedLevels) {
             const spells = grouped[lvl].sort((a: any, b: any) => a.name.localeCompare(b.name));
             html += `<div class="bcs-manage-level-group">`;
-            html += `<div class="bcs-manage-level-label">${levelLabelsShort[lvl] || `Level ${lvl}`}</div>`;
+            html += `<div class="bcs-manage-level-label">${lvlLabels[lvl] || `Level ${lvl}`}</div>`;
             for (const sp of spells) {
               const isCantrip = lvl === 0;
               const method = sp.system.method;
@@ -1165,12 +1203,13 @@ export function createBetterCharacterSheet(): any {
               const isPrepared = !!sp.system.prepared;
               const showToggle = !isCantrip && !isAlwaysOn;
               const checkedClass = isPrepared ? "prepared" : "";
+              const disabledClass = !isPrepared && atMax && showToggle ? "disabled" : "";
               const alwaysLabel = isCantrip ? "Always" : isAlwaysOn ? method.charAt(0).toUpperCase() + method.slice(1) : "";
               const ritual = sp.system.properties?.has?.("ritual");
 
               html += `<div class="bcs-manage-spell-row" data-item-id="${sp.id}">`;
               if (showToggle) {
-                html += `<span class="bcs-manage-prep-toggle ${checkedClass}" data-item-id="${sp.id}" title="Toggle prepared"></span>`;
+                html += `<span class="bcs-manage-prep-check ${checkedClass} ${disabledClass}" data-item-id="${sp.id}" title="${disabledClass ? "Max prepared reached" : "Toggle prepared"}"></span>`;
               } else {
                 html += `<span class="bcs-manage-prep-label">${alwaysLabel}</span>`;
               }
@@ -1179,25 +1218,27 @@ export function createBetterCharacterSheet(): any {
               if (ritual) html += ` <span class="bcs-spell-icon" title="Ritual">ℛ</span>`;
               html += `</span>`;
               if (isWizardClass && !isCantrip) {
-                html += `<button class="bcs-manage-remove-btn" data-item-id="${sp.id}" title="Remove from spellbook"><i class="fas fa-times"></i></button>`;
+                html += `<button class="bcs-manage-remove-btn" data-item-id="${sp.id}" title="Remove from spellbook"><i class="fas fa-trash-alt"></i></button>`;
               }
               html += `</div>`;
             }
             html += `</div>`;
           }
           if (!sortedLevels.length) {
-            html = `<div class="bcs-empty-state">No spells on this character</div>`;
+            html += `<div class="bcs-empty-state">No spells on this character</div>`;
           }
           manageBody.innerHTML = html;
 
           // Bind prep toggles
-          manageBody.querySelectorAll(".bcs-manage-prep-toggle").forEach((el: Element) => {
-            el.addEventListener("click", async () => {
+          manageBody.querySelectorAll(".bcs-manage-prep-check:not(.disabled)").forEach((el: Element) => {
+            el.addEventListener("click", async (e: Event) => {
+              e.stopPropagation();
               const itemId = (el as HTMLElement).dataset.itemId;
               if (!itemId) return;
               const item = actor.items.get(itemId);
               if (!item) return;
               await item.update({ "system.prepared": !item.system.prepared });
+              // Re-populate in place (don't close the panel)
               populateManagePanel();
             });
             (el as HTMLElement).style.cursor = "pointer";
@@ -1223,91 +1264,120 @@ export function createBetterCharacterSheet(): any {
           });
         };
 
+        // Restore panel state after re-render
+        if (this._bcsManagePanelOpen) {
+          populateManagePanel();
+          managePanel.dataset.panel = "open";
+          if (isWizardClass && learnBar) learnBar.style.display = "";
+          if (this._bcsLearnPanelOpen && learnSection) learnSection.style.display = "";
+        }
+
         // Open panel
         this.element.querySelector(".bcs-manage-spells-btn")?.addEventListener("click", () => {
           populateManagePanel();
-          if (wizardAddSection && isWizardClass) wizardAddSection.style.display = "";
+          if (isWizardClass && learnBar) learnBar.style.display = "";
+          this._bcsManagePanelOpen = true;
           managePanel.dataset.panel = "open";
         });
 
         // Close panel
         manageClose?.addEventListener("click", () => {
           managePanel.dataset.panel = "closed";
-          if (wizardAddSection) wizardAddSection.style.display = "none";
-          if (searchResults) searchResults.innerHTML = "";
+          this._bcsManagePanelOpen = false;
+          this._bcsLearnPanelOpen = false;
+          if (learnSection) learnSection.style.display = "none";
+          if (learnBar) learnBar.style.display = "none";
+          if (learnResults) learnResults.innerHTML = "";
         });
 
-        // Wizard: spell search from compendium
-        if (isWizardClass && manageSearch && searchResults) {
-          let searchTimeout: any = null;
-
-          const doSearch = async () => {
-            const query = manageSearch.value.trim().toLowerCase();
-            const levelVal = manageLevelFilter?.value || "all";
-            if (query.length < 2) { searchResults.innerHTML = ""; return; }
-
-            const pack = (game as any).packs?.get("dnd5e.spells");
-            if (!pack) {
-              searchResults.innerHTML = `<div class="bcs-empty-state">Spell compendium not found</div>`;
-              return;
-            }
-
-            const index = await pack.getIndex({ fields: ["system.level", "system.school"] });
-            const ownedNames = new Set(
-              [...actor.items].filter((i: any) => i.type === "spell").map((i: any) => `${i.name}::${i.system.level ?? 0}`)
-            );
-
-            const matches = [...index].filter((entry: any) => {
-              if (!entry.name.toLowerCase().includes(query)) return false;
-              const lvl = entry.system?.level ?? 0;
-              if (lvl === 0) return false; // can't add cantrips this way
-              if (levelVal !== "all" && lvl !== Number(levelVal)) return false;
-              if (ownedNames.has(`${entry.name}::${lvl}`)) return false;
-              return true;
-            }).slice(0, 20);
-
-            if (!matches.length) {
-              searchResults.innerHTML = `<div class="bcs-empty-state">No matching spells found</div>`;
-              return;
-            }
-
-            let html = "";
-            for (const m of matches) {
-              const lvlLabel = levelLabelsShort[m.system?.level] || `Level ${m.system?.level}`;
-              html += `<div class="bcs-manage-search-result" data-pack-id="${m._id}">`;
-              html += `<img src="${m.img || "icons/svg/mystery-man.svg"}" alt="" class="bcs-manage-spell-icon" />`;
-              html += `<div class="bcs-manage-result-info">`;
-              html += `<span class="bcs-manage-spell-name">${m.name}</span>`;
-              html += `<span class="bcs-manage-result-level">${lvlLabel}</span>`;
-              html += `</div>`;
-              html += `<button class="bcs-manage-add-btn" data-pack-id="${m._id}" title="Add to spellbook"><i class="fas fa-plus"></i></button>`;
-              html += `</div>`;
-            }
-            searchResults.innerHTML = html;
-
-            // Bind add buttons
-            searchResults.querySelectorAll(".bcs-manage-add-btn").forEach((el: Element) => {
-              el.addEventListener("click", async (e: Event) => {
-                e.stopPropagation();
-                const packId = (el as HTMLElement).dataset.packId;
-                if (!packId) return;
-                const doc = await pack.getDocument(packId);
-                if (!doc) return;
-                const data = doc.toObject();
-                data.system.method = "prepared";
-                data.system.prepared = false;
-                await actor.createEmbeddedDocuments("Item", [data]);
-                doSearch(); // refresh results to remove now-owned spell
-                populateManagePanel(); // refresh spell list
-              });
-            });
-          };
-
-          manageSearch.addEventListener("input", () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(doSearch, 300);
+        // Wizard: "Learn New Spells" toggle
+        if (learnToggleBtn) {
+          learnToggleBtn.addEventListener("click", () => {
+            if (!learnSection) return;
+            const isOpen = learnSection.style.display !== "none";
+            learnSection.style.display = isOpen ? "none" : "";
+            this._bcsLearnPanelOpen = !isOpen;
+            if (!isOpen) populateLearnList();
           });
-          manageLevelFilter?.addEventListener("change", () => doSearch());
+        }
+
+        // Wizard: learn spells list + search/filter
+        const populateLearnList = async () => {
+          if (!learnResults) return;
+          const pack = (game as any).packs?.get("dnd5e.spells");
+          if (!pack) {
+            learnResults.innerHTML = `<div class="bcs-empty-state">Spell compendium not found</div>`;
+            return;
+          }
+          const index = await pack.getIndex({ fields: ["system.level", "system.school"] });
+          const ownedNames = new Set(
+            [...actor.items].filter((i: any) => i.type === "spell").map((i: any) => `${i.name}::${i.system.level ?? 0}`)
+          );
+          const query = learnSearch?.value?.trim().toLowerCase() || "";
+          const levelVal = learnLevelFilter?.value || "all";
+
+          const matches = [...index].filter((entry: any) => {
+            const lvl = entry.system?.level ?? 0;
+            if (lvl === 0) return false;
+            if (levelVal !== "all" && lvl !== Number(levelVal)) return false;
+            if (query && !entry.name.toLowerCase().includes(query)) return false;
+            return true;
+          }).sort((a: any, b: any) => {
+            const lvlDiff = (a.system?.level ?? 0) - (b.system?.level ?? 0);
+            return lvlDiff !== 0 ? lvlDiff : a.name.localeCompare(b.name);
+          }).slice(0, 50);
+
+          if (!matches.length) {
+            learnResults.innerHTML = `<div class="bcs-empty-state">No matching spells found</div>`;
+            return;
+          }
+
+          let html = "";
+          let currentLvl = -1;
+          for (const m of matches) {
+            const lvl = m.system?.level ?? 0;
+            if (lvl !== currentLvl) {
+              currentLvl = lvl;
+              html += `<div class="bcs-manage-level-label" style="margin-top:8px;">${lvlLabels[lvl] || `Level ${lvl}`}</div>`;
+            }
+            const owned = ownedNames.has(`${m.name}::${lvl}`);
+            html += `<div class="bcs-manage-search-result ${owned ? "owned" : ""}">`;
+            html += `<img src="${m.img || "icons/svg/mystery-man.svg"}" alt="" class="bcs-manage-spell-icon" />`;
+            html += `<span class="bcs-manage-spell-name">${m.name}</span>`;
+            if (owned) {
+              html += `<span class="bcs-manage-owned-badge">In Book</span>`;
+            } else {
+              html += `<button class="bcs-manage-add-btn" data-pack-id="${m._id}" title="Add to spellbook"><i class="fas fa-plus"></i> Add</button>`;
+            }
+            html += `</div>`;
+          }
+          learnResults.innerHTML = html;
+
+          // Bind add buttons
+          learnResults.querySelectorAll(".bcs-manage-add-btn").forEach((el: Element) => {
+            el.addEventListener("click", async (e: Event) => {
+              e.stopPropagation();
+              const packId = (el as HTMLElement).dataset.packId;
+              if (!packId) return;
+              const doc = await pack.getDocument(packId);
+              if (!doc) return;
+              const data = doc.toObject();
+              data.system.method = "prepared";
+              data.system.prepared = false;
+              await actor.createEmbeddedDocuments("Item", [data]);
+              populateLearnList();
+              populateManagePanel();
+            });
+          });
+        };
+
+        if (isWizardClass && learnSearch && learnResults) {
+          let searchTimeout: any = null;
+          learnSearch.addEventListener("input", () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(populateLearnList, 300);
+          });
+          learnLevelFilter?.addEventListener("change", () => populateLearnList());
         }
       }
 
