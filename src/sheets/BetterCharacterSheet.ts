@@ -404,7 +404,7 @@ export function createBetterCharacterSheet(): any {
         const components = comps.join("/") || "—";
 
         // Source class
-        const source = spell.system.sourceClass || "Cleric";
+        const source = spell.system.sourceItem?.name || "";
 
         // Effect/damage
         const dmg = spell.system.damage?.base;
