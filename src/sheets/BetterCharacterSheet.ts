@@ -220,9 +220,9 @@ export function createBetterCharacterSheet(): any {
       const isSpellAvailable = (s: any) => {
         const lvl = s.system.level ?? 0;
         if (lvl === 0) return true;
-        const mode = s.system.preparation?.mode;
+        const mode = s.system.method;
         if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return true;
-        if (mode === "prepared") return !!s.system.preparation?.prepared;
+        if (mode === "prepared") return !!s.system.prepared;
         return true;
       };
 
@@ -422,8 +422,8 @@ export function createBetterCharacterSheet(): any {
           components,
           source,
           prepared:
-            spell.system.preparation?.mode === "prepared"
-              ? spell.system.preparation?.prepared
+            spell.system.method === "prepared"
+              ? spell.system.prepared
               : true,
           concentration: props?.has?.("concentration"),
           ritual: props?.has?.("ritual"),
