@@ -296,13 +296,15 @@ export function createBetterCharacterSheet(): any {
           ? {
               value: i.system.uses.value ?? 0,
               max: i.system.uses.max,
+              spent: Number(i.system.uses.spent) || 0,
               per: i.system.uses.recovery?.[0]?.type || "",
             }
           : null;
         const pips: { filled: boolean }[] = [];
         if (uses) {
+          const remaining = uses.max - uses.spent;
           for (let p = 0; p < uses.max; p++) {
-            pips.push({ filled: p < uses.value });
+            pips.push({ filled: p < remaining });
           }
         }
 
@@ -334,7 +336,8 @@ export function createBetterCharacterSheet(): any {
         }
 
         if (activitiesWithType.length > 1) {
-          // Multiple activities — create one entry per activity
+          // Multiple activities — create one entry per activity, uses only on first
+          let isFirst = true;
           for (const act of activitiesWithType) {
             const at = act.activation?.type || "other";
             const actDesc = act.description?.value || fullDesc;
@@ -352,9 +355,10 @@ export function createBetterCharacterSheet(): any {
               hasLongDescription: actTextOnly.length > 80,
               activationType: typeMap[at] || "other",
               activationLabel: "",
-              uses,
-              pips,
+              uses: isFirst ? uses : null,
+              pips: isFirst ? pips : [],
             });
+            isFirst = false;
           }
         } else {
           // Single activity or no activities — one entry for the whole item
@@ -492,13 +496,15 @@ export function createBetterCharacterSheet(): any {
           ? {
               value: i.system.uses.value ?? 0,
               max: i.system.uses.max,
+              spent: Number(i.system.uses.spent) || 0,
               per: i.system.uses.recovery?.[0]?.type || "",
             }
           : null;
         const pips: { filled: boolean }[] = [];
         if (uses) {
+          const remaining = uses.max - uses.spent;
           for (let p = 0; p < uses.max; p++) {
-            pips.push({ filled: p < uses.value });
+            pips.push({ filled: p < remaining });
           }
         }
         const fullDesc = i.system.description?.value || "";
