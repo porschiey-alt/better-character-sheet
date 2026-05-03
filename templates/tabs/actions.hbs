@@ -49,7 +49,19 @@
 
     <div class="bcs-combat-ref">
       <strong>Actions in Combat</strong>
-      <div class="bcs-combat-ref-list">Attack, Dash, Disengage, Dodge, Grapple, Help, Hide, Improvise, Influence, Magic, Ready, Search, Shove, Study, Utilize</div>
+      <div class="bcs-combat-ref-list">
+        <span class="bcs-combat-action" data-action-name="Attack" data-action-desc="You make one melee or ranged attack. When you take the Attack action, you can also replace one attack with a Grapple or Shove.">Attack</span>,
+        <span class="bcs-combat-action" data-action-name="Dash" data-action-desc="You gain extra movement equal to your Speed for the current turn.">Dash</span>,
+        <span class="bcs-combat-action" data-action-name="Disengage" data-action-desc="Your movement doesn't provoke Opportunity Attacks for the rest of the current turn.">Disengage</span>,
+        <span class="bcs-combat-action" data-action-name="Dodge" data-action-desc="Until the start of your next turn, attacks against you have Disadvantage and you have Advantage on DEX saving throws. You lose this benefit if Incapacitated or your Speed is 0.">Dodge</span>,
+        <span class="bcs-combat-action" data-action-name="Help" data-action-desc="You give Advantage to one ally's next ability check or attack roll against a target within 5 feet of you.">Help</span>,
+        <span class="bcs-combat-action" data-action-name="Hide" data-action-desc="You make a DEX (Stealth) check to try to become Hidden.">Hide</span>,
+        <span class="bcs-combat-action" data-action-name="Magic" data-action-desc="You cast a spell, use a magic item, or use a magical feature.">Magic</span>,
+        <span class="bcs-combat-action" data-action-name="Ready" data-action-desc="You prepare to take an action in response to a trigger you define. You use your Reaction to execute it.">Ready</span>,
+        <span class="bcs-combat-action" data-action-name="Search" data-action-desc="You make a WIS (Perception) or INT (Investigation) check to find something.">Search</span>,
+        <span class="bcs-combat-action" data-action-name="Study" data-action-desc="You make an INT (Arcana, History, Investigation, Nature, or Religion) check to study a creature, object, or area.">Study</span>,
+        <span class="bcs-combat-action" data-action-name="Utilize" data-action-desc="You use a nonmagical object or interact with an object that requires your action.">Utilize</span>
+      </div>
     </div>
   </div>
 
@@ -58,7 +70,9 @@
     <div class="bcs-action-section-header">BONUS ACTIONS</div>
     <div class="bcs-combat-ref">
       <strong>Actions in Combat</strong>
-      <div class="bcs-combat-ref-list">Two-Weapon Fighting</div>
+      <div class="bcs-combat-ref-list">
+        <span class="bcs-combat-action" data-action-name="Two-Weapon Fighting" data-action-desc="When you take the Attack action with a Light melee weapon, you can make one extra attack as a Bonus Action with a different Light melee weapon. You don't add your ability modifier to the damage of the extra attack unless that modifier is negative.">Two-Weapon Fighting</span>
+      </div>
     </div>
     {{#if bonusSpells.length}}
     <div class="bcs-action-spells-ref">
@@ -75,7 +89,9 @@
     <div class="bcs-action-section-header">REACTIONS</div>
     <div class="bcs-combat-ref">
       <strong>Actions in Combat</strong>
-      <div class="bcs-combat-ref-list">Opportunity Attack</div>
+      <div class="bcs-combat-ref-list">
+        <span class="bcs-combat-action" data-action-name="Opportunity Attack" data-action-desc="When a creature you can see leaves your reach, you can use your Reaction to make one melee attack against it. This attack occurs right before the creature leaves your reach.">Opportunity Attack</span>
+      </div>
     </div>
     {{#if reactionSpells.length}}
     <div class="bcs-action-spells-ref">
@@ -92,7 +108,9 @@
     <div class="bcs-action-section-header">OTHER</div>
     <div class="bcs-combat-ref">
       <strong>Actions in Combat</strong>
-      <div class="bcs-combat-ref-list">Interact with an Object</div>
+      <div class="bcs-combat-ref-list">
+        <span class="bcs-combat-action" data-action-name="Interact with an Object" data-action-desc="You interact with a second object for free on your turn (the first is free). Examples: draw or sheathe a weapon, open a door, pick up a dropped item.">Interact with an Object</span>
+      </div>
     </div>
     {{#if otherSpells.length}}
     <div class="bcs-action-spells-ref">

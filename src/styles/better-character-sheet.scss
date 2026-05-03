@@ -1048,6 +1048,13 @@ $radius-sm: 4px;
     font-size: 0.82rem;
     padding-left: 10px;
     border-left: 2px solid $border-color;
+    line-height: 1.8;
+  }
+
+  .bcs-combat-action {
+    cursor: pointer;
+    transition: color 0.15s;
+    &:hover { color: var(--bcs-accent); }
   }
 
   .bcs-action-spells-ref {

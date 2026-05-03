@@ -986,6 +986,21 @@ export function createBetterCharacterSheet(): any {
           });
         });
 
+      // Combat actions — click to post description to chat
+      this.element
+        .querySelectorAll(".bcs-combat-action")
+        .forEach((el: Element) => {
+          el.addEventListener("click", () => {
+            const name = (el as HTMLElement).dataset.actionName;
+            const desc = (el as HTMLElement).dataset.actionDesc;
+            if (!name) return;
+            ChatMessage.create({
+              speaker: ChatMessage.getSpeaker({ actor }),
+              content: `<h3>${name}</h3><p>${desc || ""}</p>`,
+            });
+          });
+        });
+
       // Action tab spell references — click to cast
       this.element
         .querySelectorAll(".bcs-action-spell-ref[data-spell-name]")
