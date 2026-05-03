@@ -1797,7 +1797,8 @@ $radius-sm: 4px;
 
   // ===== SHARED SLIDE-OUT PANEL STYLES (Currency, HP) =====
   .bcs-currency-panel,
-  .bcs-hp-panel {
+  .bcs-hp-panel,
+  .bcs-conditions-panel {
     position: absolute;
     top: 0;
     right: 0;
@@ -1911,6 +1912,134 @@ $radius-sm: 4px;
     cursor: pointer;
     transition: all 0.15s;
     &:hover { color: var(--bcs-accent); }
+  }
+
+  // Make defenses card clickable
+  .bcs-clickable {
+    cursor: pointer;
+    transition: all 0.15s;
+    &:hover { border-color: var(--bcs-accent-dim); }
+  }
+
+  // ===== CONDITIONS PANEL =====
+  .bcs-conditions-panel {
+    width: 320px;
+  }
+
+  .bcs-exhaustion-control {
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid $border-color;
+
+    label {
+      display: block;
+      color: $text-secondary;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+  }
+
+  .bcs-exhaustion-stepper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .bcs-exhaustion-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid $border-color;
+    background: $bg-input;
+    color: $text-primary;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+
+    &:hover {
+      border-color: var(--bcs-accent-dim);
+      background: lighten($bg-input, 5%);
+    }
+  }
+
+  .bcs-exhaustion-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: $text-primary;
+    min-width: 24px;
+    text-align: center;
+  }
+
+  .bcs-condition-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .bcs-condition-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover { background: rgba(255, 255, 255, 0.04); }
+  }
+
+  .bcs-condition-icon {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+
+  .bcs-condition-label {
+    flex: 1;
+    font-size: 0.82rem;
+    color: $text-secondary;
+    font-weight: 500;
+  }
+
+  .bcs-condition-toggle {
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .bcs-condition-toggle-track {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    position: relative;
+    transition: background 0.2s;
+  }
+
+  .bcs-condition-toggle-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: $text-muted;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: all 0.2s;
+  }
+
+  .bcs-condition-toggle.active {
+    .bcs-condition-toggle-track {
+      background: var(--bcs-accent);
+    }
+    .bcs-condition-toggle-thumb {
+      left: 18px;
+      background: $bg-dark;
+    }
   }
 
   // ===== THEME PANEL =====
