@@ -302,9 +302,9 @@ export function createBetterCharacterSheet(): any {
           : null;
         const pips: { filled: boolean }[] = [];
         if (uses) {
-          const remaining = uses.max - uses.spent;
           for (let p = 0; p < uses.max; p++) {
-            pips.push({ filled: p < remaining });
+            // Spent pips on the left, remaining on the right
+            pips.push({ filled: p >= uses.spent });
           }
         }
 
@@ -354,7 +354,22 @@ export function createBetterCharacterSheet(): any {
           // Child activity entries without uses
           for (const act of activitiesWithType) {
             const at = act.activation?.type || "other";
-            const actDesc = act.description?.value || "";
+            // Build a description from activity fields
+            let actDesc = act.description?.value || "";
+            if (!actDesc) {
+              // Synthesize a brief summary from activity data
+              const parts: string[] = [];
+              if (act.activation?.type) {
+                const atLabel: Record<string, string> = { action: "Action", bonus: "Bonus Action", reaction: "Reaction" };
+                parts.push(atLabel[act.activation.type] || act.activation.type);
+              }
+              if (act.damage?.parts?.length) {
+                const dmg = act.damage.parts[0];
+                if (dmg.formula) parts.push(`Damage: ${dmg.formula}`);
+              }
+              if (act.range?.value) parts.push(`Range: ${act.range.value} ${act.range.units || "ft."}`);
+              actDesc = parts.join(" · ");
+            }
             const actTextOnly = actDesc.replace(/<[^>]*>/g, "").trim();
             const actTruncated = actTextOnly.length > 80
               ? actTextOnly.substring(0, 80) + "…"
@@ -516,9 +531,8 @@ export function createBetterCharacterSheet(): any {
           : null;
         const pips: { filled: boolean }[] = [];
         if (uses) {
-          const remaining = uses.max - uses.spent;
           for (let p = 0; p < uses.max; p++) {
-            pips.push({ filled: p < remaining });
+            pips.push({ filled: p >= uses.spent });
           }
         }
         const fullDesc = i.system.description?.value || "";
@@ -2055,11 +2069,13 @@ export function createBetterCharacterSheet(): any {
         hookData
       );
 
-      // Restore scroll position after render
+      // Restore scroll position after render (double-rAF to ensure layout is complete)
       const newTabContent = this.element.querySelector(".bcs-tab-content") as HTMLElement;
       if (newTabContent && this._bcsScrollTop) {
         requestAnimationFrame(() => {
-          newTabContent.scrollTop = this._bcsScrollTop;
+          requestAnimationFrame(() => {
+            newTabContent.scrollTop = this._bcsScrollTop;
+          });
         });
       }
     }
