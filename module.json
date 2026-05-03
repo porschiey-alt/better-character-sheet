@@ -1,7 +1,7 @@
 {
   "id": "better-character-sheet",
   "title": "Better Character Sheet",
-  "description": "A DnDBeyond-inspired character sheet replacement for the D&D 5th Edition system in FoundryVTT.",
+  "description": "A DnDBeyond-inspired character sheet replacement for the D&amp;D 5th Edition system in FoundryVTT.",
   "version": "0.1.0",
   "compatibility": {
     "minimum": "14",
@@ -9,7 +9,8 @@
   },
   "authors": [
     {
-      "name": "porschiey-alt"
+      "name": "porschiey-alt",
+      "flags": {}
     }
   ],
   "relationships": {
@@ -28,9 +29,12 @@
     "dist/module.js"
   ],
   "styles": [
-    "dist/better-character-sheet.css"
+    {
+      "src": "dist/better-character-sheet.css"
+    }
   ],
   "url": "https://github.com/porschiey-alt/better-character-sheet",
   "manifest": "https://github.com/porschiey-alt/better-character-sheet/releases/latest/download/module.json",
-  "download": "https://github.com/porschiey-alt/better-character-sheet/releases/latest/download/better-character-sheet-v0.1.0.zip"
+  "download": "https://github.com/porschiey-alt/better-character-sheet/releases/download/v0.1.0/better-character-sheet-v0.1.0.zip",
+  "flags": {}
 }

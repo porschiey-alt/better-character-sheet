@@ -27,6 +27,10 @@ export function createBetterCharacterSheet(): any {
           height: 780,
           top: 50,
         },
+        window: {
+          resizable: true,
+          minimizable: true,
+        },
         actions: {
           shortRest: BetterCharacterSheet.#onShortRest,
           longRest: BetterCharacterSheet.#onLongRest,

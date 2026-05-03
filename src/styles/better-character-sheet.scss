@@ -37,6 +37,8 @@ $radius-sm: 4px;
   // Force opaque background on the entire application window
   &.application {
     background: var(--bcs-bg-dark) !important;
+    min-width: 900px !important;
+    min-height: 600px !important;
   }
 
   // Override standard-form grid layout that hides the header behind content
@@ -1745,6 +1747,11 @@ $radius-sm: 4px;
     background: var(--bcs-bg-dark) !important;
     position: relative;
     z-index: 1;
+  }
+
+  .window-resize-handle {
+    display: block !important;
+    cursor: se-resize !important;
   }
 
   // Override any Foundry/dnd5e table header coloring
