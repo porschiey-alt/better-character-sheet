@@ -52,6 +52,17 @@ export function createBetterCharacterSheet(): any {
     // No sidebar tabs — we manage our own tab UI
     static TABS: never[] = [];
 
+    // Persist active tab across re-renders
+    _bcsActiveTab = "actions";
+    // Persist scroll position across re-renders
+    _bcsScrollTop = 0;
+
+    /** @override — save scroll position before DOM is replaced */
+    async _preRender(context: any, options: any) {
+      await super._preRender(context, options);
+      const tabContent = this.element?.querySelector(".bcs-tab-content") as HTMLElement;
+      if (tabContent) this._bcsScrollTop = tabContent.scrollTop;
+    }
     /** @override */
     async _prepareContext(options: any) {
       const context = await super._prepareContext(options);
@@ -175,6 +186,19 @@ export function createBetterCharacterSheet(): any {
 
       // Weapons — only equipped
       for (const i of actor.items.filter((i: any) => i.type === "weapon" && i.system.equipped)) {
+        // Resolve formula references like @mod, @abilities.str.mod
+        let dmgFormula = i.system.damage?.base?.formula || "0";
+        const rollData = i.getRollData?.() || {};
+        dmgFormula = dmgFormula.replace(/@([a-zA-Z0-9_.]+)/g, (_: string, path: string) => {
+          const parts = path.split(".");
+          let val: any = rollData;
+          for (const p of parts) {
+            val = val?.[p];
+            if (val === undefined) break;
+          }
+          return val !== undefined ? String(val) : "0";
+        });
+
         attacks.push({
           id: i.id,
           name: i.name,
@@ -187,7 +211,7 @@ export function createBetterCharacterSheet(): any {
           toHit: i.system.attack?.flat != null
             ? `+${i.system.attack.flat}`
             : "—",
-          damage: i.system.damage?.base?.formula || "0",
+          damage: dmgFormula,
           notes: "",
         });
       }
@@ -196,9 +220,9 @@ export function createBetterCharacterSheet(): any {
       const isSpellAvailable = (s: any) => {
         const lvl = s.system.level ?? 0;
         if (lvl === 0) return true;
-        const mode = s.system.preparation?.mode;
+        const mode = s.system.method;
         if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return true;
-        if (mode === "prepared") return !!s.system.preparation?.prepared;
+        if (mode === "prepared") return !!s.system.prepared;
         return true;
       };
 
@@ -380,7 +404,7 @@ export function createBetterCharacterSheet(): any {
         const components = comps.join("/") || "—";
 
         // Source class
-        const source = spell.system.sourceClass || "Cleric";
+        const source = spell.system.sourceItem?.name || "";
 
         // Effect/damage
         const dmg = spell.system.damage?.base;
@@ -398,8 +422,8 @@ export function createBetterCharacterSheet(): any {
           components,
           source,
           prepared:
-            spell.system.preparation?.mode === "prepared"
-              ? spell.system.preparation?.prepared
+            spell.system.method === "prepared"
+              ? spell.system.prepared
               : true,
           concentration: props?.has?.("concentration"),
           ritual: props?.has?.("ritual"),
@@ -447,7 +471,7 @@ export function createBetterCharacterSheet(): any {
         type,
         label: invLabels[type] || type,
         items: actor.items
-          .filter((i: any) => i.type === type)
+          .filter((i: any) => i.type === type && i.system.type?.value !== "natural")
           .map((i: any) => {
             const price = i.system.price;
             const cost = price?.value ? `${price.value} ${price.denomination || "gp"}` : "";
@@ -555,6 +579,30 @@ export function createBetterCharacterSheet(): any {
       ];
       const hasFeatures = featureGroups.some((g) => g.items.length > 0);
 
+      // Death saves — show when HP is 0
+      const showDeathSaves = (system.attributes?.hp?.value ?? 1) === 0;
+
+      // Currency data for editing panel
+      const currency = {
+        pp: system.currency?.pp ?? 0,
+        gp: system.currency?.gp ?? 0,
+        ep: system.currency?.ep ?? 0,
+        sp: system.currency?.sp ?? 0,
+        cp: system.currency?.cp ?? 0,
+      };
+
+      // Attunement — items that require attunement
+      const attunableItems = actor.items
+        .filter((i: any) => i.system.attunement && i.system.attunement !== "none" && i.system.attunement !== "")
+        .map((i: any) => ({
+          id: i.id,
+          name: i.name,
+          img: i.img,
+          attuned: i.system.attuned ?? (i.system.attunement === "attuned"),
+        }));
+      const attunementMax = system.attributes?.attunement?.max ?? 3;
+      const attunementCount = attunableItems.filter((i: any) => i.attuned).length;
+
       // Resistances/Immunities for extras tab
       const dr = system.traits?.dr;
       const di = system.traits?.di;
@@ -600,6 +648,11 @@ export function createBetterCharacterSheet(): any {
         conditionImmunities,
         conditions,
         hasDefenses,
+        showDeathSaves,
+        currency,
+        attunableItems,
+        attunementMax,
+        attunementCount,
         backdropUrl,
         themeAccent: actor.getFlag("better-character-sheet", "themeAccent") || "#c8a85c",
         themeBg: actor.getFlag("better-character-sheet", "themeBg") || "#12151a",
@@ -617,13 +670,14 @@ export function createBetterCharacterSheet(): any {
       this.document.longRest();
     }
 
-    static #onHeal(this: any) {
+    static async #onHeal(this: any) {
       const input = this.element.querySelector(
         ".bcs-hp-input"
       ) as HTMLInputElement;
       const val = parseInt(input?.value || "0", 10);
       if (val > 0) {
-        this.document.applyDamage(-val);
+        await this.document.applyDamage(-val);
+        await this.document.update({ "system.attributes.death.success": 0, "system.attributes.death.failure": 0 });
         if (input) input.value = "";
       }
     }
@@ -700,6 +754,19 @@ export function createBetterCharacterSheet(): any {
         }
       }
 
+      // Restore active tab from instance state
+      const savedTab = this._bcsActiveTab || "actions";
+      this.element
+        .querySelectorAll(".bcs-tab-btn")
+        .forEach((b: Element) => {
+          b.classList.toggle("active", (b as HTMLElement).dataset.bcsTab === savedTab);
+        });
+      this.element
+        .querySelectorAll(".bcs-tab-pane")
+        .forEach((p: Element) => {
+          p.classList.toggle("active", (p as HTMLElement).dataset.bcsTabPane === savedTab);
+        });
+
       // Tab switching
       this.element
         .querySelectorAll(".bcs-tab-btn")
@@ -707,6 +774,7 @@ export function createBetterCharacterSheet(): any {
           btn.addEventListener("click", (e: Event) => {
             const tab = (e.currentTarget as HTMLElement).dataset.bcsTab;
             if (!tab) return;
+            this._bcsActiveTab = tab;
             // Update active button
             this.element
               .querySelectorAll(".bcs-tab-btn")
@@ -861,14 +929,47 @@ export function createBetterCharacterSheet(): any {
           (el as HTMLElement).style.cursor = "pointer";
         });
 
-      // 5. Death saves — click death save pips (in extras tab)
+      // 5. Death saves — click individual pips to toggle values
       this.element
-        .querySelectorAll(".bcs-death-saves")
+        .querySelectorAll(".bcs-ds-pip[data-ds-type]")
         .forEach((el: Element) => {
           el.addEventListener("click", (e: Event) => {
-            actor.rollDeathSave({ event: e, legacy: false });
+            e.stopPropagation();
+            const pipEl = el as HTMLElement;
+            const type = pipEl.dataset.dsType; // "success" or "failure"
+            const idx = parseInt(pipEl.dataset.dsIndex || "0", 10);
+            if (!type) return;
+            const key = type === "success" ? "success" : "failure";
+            const current = actor.system.attributes.death[key] ?? 0;
+            // If clicking at/below current value, set to index-1; otherwise set to index
+            const newVal = current >= idx ? idx - 1 : idx;
+            actor.update({
+              [`system.attributes.death.${key}`]: Math.max(0, Math.min(3, newVal)),
+            });
           });
           (el as HTMLElement).style.cursor = "pointer";
+        });
+
+      // Death save roll button
+      this.element
+        .querySelectorAll(".bcs-ds-roll-btn")
+        .forEach((el: Element) => {
+          el.addEventListener("click", (e: Event) => {
+            e.stopPropagation();
+            actor.rollDeathSave({ event: e, legacy: false });
+          });
+        });
+
+      // Death saves heal button — heal 1 HP to stabilize
+      this.element
+        .querySelectorAll(".bcs-ds-heal-btn")
+        .forEach((el: Element) => {
+          el.addEventListener("click", async (e: Event) => {
+            e.stopPropagation();
+            e.preventDefault();
+            await actor.applyDamage(-1);
+            await actor.update({ "system.attributes.death.success": 0, "system.attributes.death.failure": 0 });
+          });
         });
 
       // 6 & 7. Attack/spell rolls — click attack row or spell row to use the item
@@ -899,10 +1000,11 @@ export function createBetterCharacterSheet(): any {
       this.element
         .querySelectorAll(".bcs-heal-btn")
         .forEach((el: Element) => {
-          el.addEventListener("click", () => {
+          el.addEventListener("click", async () => {
             const val = parseInt(hpInput?.value || "0", 10);
             if (val > 0) {
-              actor.applyDamage(-val);
+              await actor.applyDamage(-val);
+              await actor.update({ "system.attributes.death.success": 0, "system.attributes.death.failure": 0 });
               if (hpInput) hpInput.value = "";
             }
           });
@@ -962,27 +1064,26 @@ export function createBetterCharacterSheet(): any {
       this.element
         .querySelectorAll(".bcs-feat-pip")
         .forEach((el: Element) => {
-          el.addEventListener("click", () => {
+          el.addEventListener("click", (e: Event) => {
+            e.stopPropagation();
+            e.preventDefault();
             const itemEl = el.closest(
               "[data-item-id]"
             ) as HTMLElement;
             const itemId = itemEl?.dataset.itemId;
             if (!itemId) return;
             const item = actor.items.get(itemId);
-            if (!item?.system.uses?.max) return;
+            if (!item) return;
+            const usesMax = Number(item.system.uses?.max) || 0;
+            if (!usesMax) return;
+            const spent = Number(item.system.uses?.spent) || 0;
             const isFilled = el.classList.contains("filled");
-            // filled = available, clicking it = consume one
-            // not filled = used up, clicking it = restore one
-            const newVal = isFilled
-              ? Math.max(
-                  (item.system.uses.value || 0) - 1,
-                  0
-                )
-              : Math.min(
-                  (item.system.uses.value || 0) + 1,
-                  item.system.uses.max
-                );
-            item.update({ "system.uses.value": newVal });
+            // filled = available, clicking it = spend one
+            // not filled = spent, clicking it = recover one
+            const newSpent = isFilled
+              ? Math.min(spent + 1, usesMax)
+              : Math.max(spent - 1, 0);
+            item.update({ "system.uses.spent": newSpent });
           });
         });
 
@@ -1065,18 +1166,96 @@ export function createBetterCharacterSheet(): any {
         .forEach((el: Element) => {
           el.addEventListener("click", (e: Event) => {
             e.stopPropagation();
+            e.preventDefault();
             const row = el.closest("[data-item-id]") as HTMLElement;
             const itemId = row?.dataset.itemId;
             if (!itemId) return;
             const item = actor.items.get(itemId);
-            if (item) {
-              item.update({
-                "system.equipped": !item.system.equipped,
-              });
-            }
+            if (!item) return;
+            const current = typeof item.system.equipped === "object"
+              ? item.system.equipped?.value
+              : item.system.equipped;
+            item.update({ "system.equipped": !current });
           });
           (el as HTMLElement).style.cursor = "pointer";
         });
+
+      // 19. Attunement toggle — click attune checkbox
+      this.element
+        .querySelectorAll(".bcs-attune-check")
+        .forEach((el: Element) => {
+          el.addEventListener("click", (e: Event) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const row = el.closest("[data-item-id]") as HTMLElement;
+            const itemId = row?.dataset.itemId;
+            if (!itemId) return;
+            const item = actor.items.get(itemId);
+            if (!item) return;
+            const isAttuned = item.system.attuned ?? (item.system.attunement === "attuned");
+            item.update({ "system.attuned": !isAttuned });
+          });
+          (el as HTMLElement).style.cursor = "pointer";
+        });
+
+      // ========================================
+      // CURRENCY PANEL
+      // ========================================
+      const currencyPanel = this.element.querySelector(".bcs-currency-panel") as HTMLElement;
+      const currencyClose = this.element.querySelector(".bcs-currency-close");
+      const currencyApply = this.element.querySelector(".bcs-currency-apply");
+
+      this.element.querySelectorAll(".bcs-inv-gold").forEach((el: Element) => {
+        el.addEventListener("click", () => {
+          if (currencyPanel) currencyPanel.dataset.panel = "open";
+        });
+        (el as HTMLElement).style.cursor = "pointer";
+      });
+
+      currencyClose?.addEventListener("click", () => {
+        if (currencyPanel) currencyPanel.dataset.panel = "closed";
+      });
+
+      currencyApply?.addEventListener("click", () => {
+        const updates: Record<string, number> = {};
+        this.element.querySelectorAll(".bcs-currency-input").forEach((input: Element) => {
+          const inp = input as HTMLInputElement;
+          const denom = inp.dataset.currency;
+          if (denom) updates[`system.currency.${denom}`] = Math.max(0, parseInt(inp.value, 10) || 0);
+        });
+        actor.update(updates);
+        if (currencyPanel) currencyPanel.dataset.panel = "closed";
+      });
+
+      // ========================================
+      // HP EDITING PANEL
+      // ========================================
+      const hpPanel = this.element.querySelector(".bcs-hp-panel") as HTMLElement;
+      const hpPanelClose = this.element.querySelector(".bcs-hp-panel-close");
+      const hpPanelApply = this.element.querySelector(".bcs-hp-panel-apply");
+
+      this.element.querySelectorAll(".bcs-hp-info").forEach((el: Element) => {
+        el.addEventListener("click", () => {
+          if (hpPanel) hpPanel.dataset.panel = "open";
+        });
+        (el as HTMLElement).style.cursor = "pointer";
+      });
+
+      hpPanelClose?.addEventListener("click", () => {
+        if (hpPanel) hpPanel.dataset.panel = "closed";
+      });
+
+      hpPanelApply?.addEventListener("click", () => {
+        const hpCur = this.element.querySelector('.bcs-hp-edit-input[data-hp-field="value"]') as HTMLInputElement;
+        const hpMax = this.element.querySelector('.bcs-hp-edit-input[data-hp-field="max"]') as HTMLInputElement;
+        const hpTemp = this.element.querySelector('.bcs-hp-edit-input[data-hp-field="temp"]') as HTMLInputElement;
+        const updates: Record<string, number> = {};
+        if (hpCur) updates["system.attributes.hp.value"] = Math.max(0, parseInt(hpCur.value, 10) || 0);
+        if (hpMax) updates["system.attributes.hp.max"] = Math.max(0, parseInt(hpMax.value, 10) || 0);
+        if (hpTemp) updates["system.attributes.hp.temp"] = Math.max(0, parseInt(hpTemp.value, 10) || 0);
+        actor.update(updates);
+        if (hpPanel) hpPanel.dataset.panel = "closed";
+      });
 
       // ========================================
       // THEME CUSTOMIZATION
@@ -1213,6 +1392,12 @@ export function createBetterCharacterSheet(): any {
         $(this.element),
         hookData
       );
+
+      // Restore scroll position after render
+      const newTabContent = this.element.querySelector(".bcs-tab-content") as HTMLElement;
+      if (newTabContent && this._bcsScrollTop) {
+        newTabContent.scrollTop = this._bcsScrollTop;
+      }
     }
 
     // Darken a hex color by mixing with near-black

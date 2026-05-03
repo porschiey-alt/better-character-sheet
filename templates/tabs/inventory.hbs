@@ -11,6 +11,24 @@
     </div>
   </div>
 
+  {{!-- Attunement --}}
+  {{#if attunableItems.length}}
+  <div class="bcs-attunement-section">
+    <div class="bcs-inv-section-header">
+      <span class="bcs-inv-section-title">Attunement ({{attunementCount}} / {{attunementMax}})</span>
+    </div>
+    <div class="bcs-attunement-list">
+      {{#each attunableItems}}
+      <div class="bcs-attunement-item" data-item-id="{{id}}">
+        <span class="bcs-attune-check {{#if attuned}}attuned{{/if}}"></span>
+        <img src="{{img}}" alt="" class="bcs-item-icon" />
+        <span class="bcs-attunement-name">{{name}}</span>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
   {{!-- Filter pills --}}
   <div class="bcs-inv-filters">
     <button class="bcs-filter-pill active" data-inv-filter="all">ALL</button>
@@ -42,9 +60,7 @@
         {{#each items}}
         <tr class="bcs-inv-row" data-item-id="{{id}}">
           <td class="col-active">
-            <span class="bcs-equip-check {{#if equipped}}equipped{{/if}}">
-              {{#if equipped}}■{{else}}□{{/if}}
-            </span>
+            <span class="bcs-equip-check {{#if equipped}}equipped{{/if}}"></span>
           </td>
           <td class="col-name">
             <div class="bcs-inv-name-cell">
