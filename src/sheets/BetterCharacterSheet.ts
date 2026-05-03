@@ -615,8 +615,24 @@ export function createBetterCharacterSheet(): any {
       const conditions = actor.effects
         ?.filter((e: any) => e.type === "condition" || e.statuses?.size > 0)
         ?.map((e: any) => e.name) || [];
+
+      // All available conditions for the conditions panel
+      const conditionTypes = CONFIG.statusEffects
+        ?.filter((s: any) => s.id && s.id !== "dead")
+        ?.map((s: any) => {
+          const isActive = actor.effects?.some(
+            (e: any) => e.statuses?.has(s.id) || (e.type === "condition" && e.system?.id === s.id)
+          ) || false;
+          return {
+            id: s.id,
+            label: s.name || s.label || s.id,
+            icon: s.img || s.icon || "",
+            active: isActive,
+          };
+        }) || [];
+      const exhaustionLevel = system.attributes?.exhaustion || 0;
       const hasDefenses = resistances.length > 0 || immunities.length > 0 ||
-        conditionImmunities.length > 0 || conditions.length > 0;
+        conditionImmunities.length > 0 || conditions.length > 0 || exhaustionLevel > 0;
 
       return {
         ...context,
@@ -647,6 +663,8 @@ export function createBetterCharacterSheet(): any {
         immunities,
         conditionImmunities,
         conditions,
+        conditionTypes,
+        exhaustionLevel,
         hasDefenses,
         showDeathSaves,
         currency,
@@ -1255,6 +1273,53 @@ export function createBetterCharacterSheet(): any {
         if (hpTemp) updates["system.attributes.hp.temp"] = Math.max(0, parseInt(hpTemp.value, 10) || 0);
         actor.update(updates);
         if (hpPanel) hpPanel.dataset.panel = "closed";
+      });
+
+      // ========================================
+      // CONDITIONS PANEL
+      // ========================================
+      const conditionsPanel = this.element.querySelector(".bcs-conditions-panel") as HTMLElement;
+      const conditionsClose = this.element.querySelector(".bcs-conditions-close");
+
+      this.element.querySelectorAll('[data-action="open-conditions"]').forEach((el: Element) => {
+        el.addEventListener("click", () => {
+          if (conditionsPanel) conditionsPanel.dataset.panel = "open";
+        });
+      });
+
+      conditionsClose?.addEventListener("click", () => {
+        if (conditionsPanel) conditionsPanel.dataset.panel = "closed";
+      });
+
+      // Condition toggles
+      this.element.querySelectorAll(".bcs-condition-row").forEach((row: Element) => {
+        row.addEventListener("click", async (e: Event) => {
+          e.preventDefault();
+          const conditionId = (row as HTMLElement).dataset.conditionId;
+          if (!conditionId) return;
+          // Use the token's toggleStatusEffect or actor's toggleStatusEffect
+          const token = actor.getActiveTokens()?.[0];
+          if (token) {
+            await token.toggleStatusEffect(conditionId);
+          } else {
+            await actor.toggleStatusEffect(conditionId);
+          }
+        });
+      });
+
+      // Exhaustion stepper
+      this.element.querySelectorAll(".bcs-exhaustion-btn").forEach((btn: Element) => {
+        btn.addEventListener("click", async (e: Event) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const dir = (btn as HTMLElement).dataset.exhaustionDir;
+          const current = actor.system.attributes?.exhaustion || 0;
+          let next = dir === "up" ? current + 1 : current - 1;
+          next = Math.max(0, Math.min(6, next));
+          if (next !== current) {
+            await actor.update({ "system.attributes.exhaustion": next });
+          }
+        });
       });
 
       // ========================================

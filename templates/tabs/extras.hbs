@@ -5,8 +5,13 @@
     <h4 class="bcs-extras-title">Conditions</h4>
     <div class="bcs-exhaustion">
       <span class="bcs-extras-label">Exhaustion:</span>
-      <span class="bcs-extras-value">{{system.attributes.exhaustion}}</span>
+      <span class="bcs-extras-value">{{exhaustionLevel}}</span>
     </div>
+    {{#if conditions.length}}
+    <div class="bcs-extras-list" style="margin-top: 6px;">
+      {{#each conditions}}<span class="bcs-extras-tag">{{this}}</span>{{/each}}
+    </div>
+    {{/if}}
   </div>
 
   {{!-- Resistances / Immunities --}}

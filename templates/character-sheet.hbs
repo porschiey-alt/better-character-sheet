@@ -127,13 +127,14 @@
           <div class="bcs-combat-card-label">Initiative</div>
         </div>
 
-        <div class="bcs-combat-card bcs-combat-defenses">
+        <div class="bcs-combat-card bcs-combat-defenses bcs-clickable" data-action="open-conditions">
           <div class="bcs-combat-card-label">Defenses &amp; Conditions</div>
           <div class="bcs-defense-tags">
             {{#each resistances}}<span class="bcs-defense-tag resist">Resist {{this}}</span>{{/each}}
             {{#each immunities}}<span class="bcs-defense-tag immune">Immune {{this}}</span>{{/each}}
             {{#each conditionImmunities}}<span class="bcs-defense-tag cond-immune">{{this}} Immune</span>{{/each}}
             {{#each conditions}}<span class="bcs-defense-tag condition">{{this}}</span>{{/each}}
+            {{#if exhaustionLevel}}<span class="bcs-defense-tag condition">Exhaustion {{exhaustionLevel}}</span>{{/if}}
             {{#unless hasDefenses}}<span class="bcs-defense-none">None</span>{{/unless}}
           </div>
         </div>
@@ -234,6 +235,37 @@
         <input type="number" class="bcs-hp-edit-input" data-hp-field="temp" value="{{system.attributes.hp.temp}}" min="0" />
       </div>
       <button type="button" class="bcs-panel-apply bcs-hp-panel-apply">Apply</button>
+    </div>
+  </div>
+
+  {{!-- Conditions panel --}}
+  <div class="bcs-conditions-panel" data-panel="closed">
+    <div class="bcs-panel-header">
+      <h3 class="bcs-panel-title"><i class="fas fa-exclamation-triangle"></i> Conditions</h3>
+      <button type="button" class="bcs-conditions-close"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="bcs-panel-body">
+      <div class="bcs-exhaustion-control">
+        <label>Exhaustion Level</label>
+        <div class="bcs-exhaustion-stepper">
+          <button type="button" class="bcs-exhaustion-btn" data-exhaustion-dir="down"><i class="fas fa-minus"></i></button>
+          <span class="bcs-exhaustion-value">{{exhaustionLevel}}</span>
+          <button type="button" class="bcs-exhaustion-btn" data-exhaustion-dir="up"><i class="fas fa-plus"></i></button>
+        </div>
+      </div>
+      <div class="bcs-condition-list">
+        {{#each conditionTypes}}
+        <div class="bcs-condition-row" data-condition-id="{{this.id}}">
+          <img class="bcs-condition-icon" src="{{this.icon}}" alt="{{this.label}}" />
+          <span class="bcs-condition-label">{{this.label}}</span>
+          <div class="bcs-condition-toggle {{#if this.active}}active{{/if}}">
+            <div class="bcs-condition-toggle-track">
+              <div class="bcs-condition-toggle-thumb"></div>
+            </div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
     </div>
   </div>
 
