@@ -154,17 +154,18 @@ export function resolveFormula(formula: string, rollData: Record<string, any>): 
 
 /**
  * Determine if a spell should be shown as available (prepared/always/innate/etc).
- * Conservative: if the method is unrecognized, only show if `prepared` is explicitly true.
+ * If a `prepared` property exists (even for unrecognized methods), we respect it.
  */
 export function isSpellAvailable(spell: any): boolean {
   const lvl = spell.system.level ?? 0;
   if (lvl === 0) return true;
   const mode = spell.system.method;
   if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return true;
-  if (mode === "prepared") return spell.system.prepared === true;
-  // Unknown method: respect the prepared flag if it's a boolean, otherwise hide
-  if (typeof spell.system.prepared === "boolean") return spell.system.prepared;
-  return false;
+  // For "prepared" mode or any mode that has a prepared property, respect the flag
+  if (mode === "prepared" || spell.system.prepared !== undefined) {
+    return !!spell.system.prepared;
+  }
+  return true;
 }
 
 /**
