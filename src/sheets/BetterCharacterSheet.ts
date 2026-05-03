@@ -471,7 +471,7 @@ export function createBetterCharacterSheet(): any {
         type,
         label: invLabels[type] || type,
         items: actor.items
-          .filter((i: any) => i.type === type)
+          .filter((i: any) => i.type === type && i.system.type?.value !== "natural")
           .map((i: any) => {
             const price = i.system.price;
             const cost = price?.value ? `${price.value} ${price.denomination || "gp"}` : "";
