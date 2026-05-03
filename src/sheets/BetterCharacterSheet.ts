@@ -161,9 +161,6 @@ export function createBetterCharacterSheet(): any {
           };
         });
 
-      // Spell level labels — imported from data-transforms (single source of truth)
-      const levelLabels = LEVEL_LABELS;
-
       // Build attacks from weapons AND attack spells
       const attacks: any[] = [];
 
@@ -232,7 +229,7 @@ export function createBetterCharacterSheet(): any {
           ? `+${scInfo?.attack ?? 0}`
           : hasSaveDamage ? `DC ${scInfo?.dc ?? 10}` : "—";
 
-        const lvlLabel = i.system.level === 0 ? "Cantrip" : (levelLabels[i.system.level] || "");
+        const lvlLabel = i.system.level === 0 ? "Cantrip" : (LEVEL_LABELS[i.system.level] || "");
         const className = classLabel.split(" ")[0] || "Spell";
 
         attacks.push({
@@ -324,7 +321,7 @@ export function createBetterCharacterSheet(): any {
       for (const spell of spellItems) {
         const actType = spell.system.activation?.type || "action";
         const lvl = spell.system.level ?? 0;
-        const label = lvl === 0 ? "Cantrip" : levelLabels[lvl] || `${lvl}th`;
+        const label = lvl === 0 ? "Cantrip" : LEVEL_LABELS[lvl] || `${lvl}th`;
         const entry = { name: spell.name, level: lvl, levelLabel: label };
 
         if (actType === "bonus") spellsByActivation.bonus.push(entry);
@@ -399,7 +396,7 @@ export function createBetterCharacterSheet(): any {
         .sort(([a], [b]) => Number(a) - Number(b))
         .map(([lvl, spells]) => ({
           level: Number(lvl),
-          label: levelLabels[Number(lvl)] || `Level ${lvl}`,
+          label: LEVEL_LABELS[Number(lvl)] || `Level ${lvl}`,
           spells: spells.sort((a: any, b: any) =>
             a.name.localeCompare(b.name)
           ),
