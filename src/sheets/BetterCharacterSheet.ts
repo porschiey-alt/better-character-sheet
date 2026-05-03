@@ -1309,6 +1309,13 @@ export function createBetterCharacterSheet(): any {
             learnResults.innerHTML = `<div class="bcs-empty-state">Spell compendium not found</div>`;
             return;
           }
+          // Determine highest spell slot level the actor can cast
+          const slots = actor.system.spells || {};
+          let maxSlotLevel = 0;
+          for (let i = 1; i <= 9; i++) {
+            if (slots[`spell${i}`]?.max > 0) maxSlotLevel = i;
+          }
+
           const index = await pack.getIndex({ fields: ["system.level", "system.school"] });
           const ownedNames = new Set(
             [...actor.items].filter((i: any) => i.type === "spell").map((i: any) => `${i.name}::${i.system.level ?? 0}`)
@@ -1319,6 +1326,7 @@ export function createBetterCharacterSheet(): any {
           const matches = [...index].filter((entry: any) => {
             const lvl = entry.system?.level ?? 0;
             if (lvl === 0) return false;
+            if (maxSlotLevel > 0 && lvl > maxSlotLevel) return false;
             if (levelVal !== "all" && lvl !== Number(levelVal)) return false;
             if (query && !entry.name.toLowerCase().includes(query)) return false;
             return true;
