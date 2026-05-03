@@ -1,4 +1,16 @@
 import { getDDBBackdropUrl } from "../helpers/ddb-backdrop.ts";
+import {
+  buildAbilities,
+  buildSaves,
+  buildSkills,
+  resolveFormula,
+  isSpellAvailable,
+  buildSpellSlots,
+  buildInventoryGroups,
+  buildConditionTypes,
+  buildCurrency,
+  buildEncumbrance,
+} from "../helpers/data-transforms.ts";
 
 /**
  * BetterCharacterSheet — extends the dnd5e CharacterActorSheet,
@@ -73,40 +85,21 @@ export function createBetterCharacterSheet(): any {
       const backdropUrl = getDDBBackdropUrl(this.document);
 
       // Build ability scores for the horizontal row
-      const abilityKeys = ["str", "dex", "con", "int", "wis", "cha"] as const;
-      const abilities = abilityKeys.map((key) => {
-        const ab = system.abilities[key];
-        return {
-          key,
-          abbr: key.toUpperCase(),
-          label: CONFIG.DND5E.abilities[key]?.label ?? key,
-          value: ab.value,
-          mod: ab.mod,
-        };
-      });
+      const abilityLabels: Record<string, string> = {};
+      for (const k of ["str", "dex", "con", "int", "wis", "cha"]) {
+        abilityLabels[k] = CONFIG.DND5E.abilities[k]?.label ?? k;
+      }
+      const abilities = buildAbilities(system.abilities, abilityLabels);
 
       // Build saving throws
-      const saves = abilityKeys.map((key) => {
-        const ab = system.abilities[key];
-        return {
-          key,
-          abbr: key.toUpperCase(),
-          mod: ab.save?.value ?? ab.mod,
-          proficient: ab.proficient ?? 0,
-        };
-      });
+      const saves = buildSaves(system.abilities);
 
       // Build skills array sorted alphabetically
-      const skills = Object.entries(system.skills || {})
-        .map(([key, sk]: [string, any]) => ({
-          key,
-          label: CONFIG.DND5E.skills[key]?.label ?? key,
-          ability: sk.ability,
-          abbreviation: (sk.ability || "").toUpperCase().slice(0, 3),
-          total: sk.total ?? 0,
-          value: sk.value ?? 0,
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label));
+      const skillLabels: Record<string, string> = {};
+      for (const k of Object.keys(system.skills || {})) {
+        skillLabels[k] = CONFIG.DND5E.skills[k]?.label ?? k;
+      }
+      const skills = buildSkills(system.skills || {}, skillLabels);
 
       // Portrait
       const portrait = {
@@ -189,15 +182,7 @@ export function createBetterCharacterSheet(): any {
         // Resolve formula references like @mod, @abilities.str.mod
         let dmgFormula = i.system.damage?.base?.formula || "0";
         const rollData = i.getRollData?.() || {};
-        dmgFormula = dmgFormula.replace(/@([a-zA-Z0-9_.]+)/g, (_: string, path: string) => {
-          const parts = path.split(".");
-          let val: any = rollData;
-          for (const p of parts) {
-            val = val?.[p];
-            if (val === undefined) break;
-          }
-          return val !== undefined ? String(val) : "0";
-        });
+        dmgFormula = resolveFormula(dmgFormula, rollData);
 
         attacks.push({
           id: i.id,
@@ -217,15 +202,6 @@ export function createBetterCharacterSheet(): any {
       }
 
       // Attack spells — only prepared spells with attack or save+damage activities
-      const isSpellAvailable = (s: any) => {
-        const lvl = s.system.level ?? 0;
-        if (lvl === 0) return true;
-        const mode = s.system.method;
-        if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return true;
-        if (mode === "prepared") return !!s.system.prepared;
-        return true;
-      };
-
       for (const i of actor.items.filter((i: any) => i.type === "spell" && isSpellAvailable(i))) {
         const acts = i.system.activities;
         if (!acts) continue;
@@ -440,71 +416,14 @@ export function createBetterCharacterSheet(): any {
         }));
 
       // Spell slots
-      const spellSlots = [];
-      for (let i = 1; i <= 9; i++) {
-        const slot = system.spells?.[`spell${i}`];
-        if (slot) {
-          const pips = [];
-          for (let p = 0; p < (slot.max || 0); p++) {
-            pips.push({ used: p >= (slot.value || 0) });
-          }
-          spellSlots.push({
-            level: i,
-            label: levelLabels[i] || `Level ${i}`,
-            value: slot.value ?? 0,
-            max: slot.max ?? 0,
-            pips,
-          });
-        }
-      }
+      const spellSlots = buildSpellSlots(system.spells || {});
 
       // Build inventory groups
-      const invTypes = ["weapon", "equipment", "consumable", "container", "loot"];
-      const invLabels: Record<string, string> = {
-        weapon: "Weapons",
-        equipment: "Equipment",
-        consumable: "Consumables",
-        container: "Containers",
-        loot: "Loot",
-      };
-      const inventoryGroups = invTypes.map((type) => ({
-        type,
-        label: invLabels[type] || type,
-        items: actor.items
-          .filter((i: any) => i.type === type && i.system.type?.value !== "natural")
-          .map((i: any) => {
-            const price = i.system.price;
-            const cost = price?.value ? `${price.value} ${price.denomination || "gp"}` : "";
-            const subtype = i.system.type?.label || i.system.armor?.type || "";
-            // Notes: AC for armor, damage for weapons, properties
-            let notes = "";
-            if (i.system.armor?.value) notes = `AC ${i.system.armor.value}`;
-            else if (i.system.damage?.base?.formula) notes = i.system.damage.base.formula;
-            if (i.system.uses?.max) notes += notes ? `, ${i.system.uses.value}/${i.system.uses.max} charges` : `${i.system.uses.value}/${i.system.uses.max} charges`;
-
-            return {
-              id: i.id,
-              name: i.name,
-              img: i.img,
-              quantity: i.system.quantity ?? 1,
-              weight: i.system.weight?.value ?? 0,
-              equipped: !!i.system.equipped,
-              attuned: i.system.attunement === "attuned",
-              cost,
-              subtype,
-              notes,
-            };
-          }),
-      }));
+      const inventoryGroups = buildInventoryGroups([...actor.items]);
       const hasInventory = inventoryGroups.some((g) => g.items.length > 0);
 
       // Encumbrance
-      const enc = system.attributes?.encumbrance || {};
-      const encumbrance = {
-        value: enc.value ?? 0,
-        max: enc.max ?? 150,
-        pct: enc.pct ?? 0,
-      };
+      const encumbrance = buildEncumbrance(system.attributes?.encumbrance);
 
       // Feature groups with descriptions and pips
       const buildFeatureItem = (i: any) => {
@@ -583,13 +502,7 @@ export function createBetterCharacterSheet(): any {
       const showDeathSaves = (system.attributes?.hp?.value ?? 1) === 0;
 
       // Currency data for editing panel
-      const currency = {
-        pp: system.currency?.pp ?? 0,
-        gp: system.currency?.gp ?? 0,
-        ep: system.currency?.ep ?? 0,
-        sp: system.currency?.sp ?? 0,
-        cp: system.currency?.cp ?? 0,
-      };
+      const currency = buildCurrency(system.currency);
 
       // Attunement — items that require attunement
       const attunableItems = actor.items
@@ -617,19 +530,10 @@ export function createBetterCharacterSheet(): any {
         ?.map((e: any) => e.name) || [];
 
       // All available conditions for the conditions panel
-      const conditionTypes = CONFIG.statusEffects
-        ?.filter((s: any) => s.id && s.id !== "dead")
-        ?.map((s: any) => {
-          const isActive = actor.effects?.some(
-            (e: any) => e.statuses?.has(s.id) || (e.type === "condition" && e.system?.id === s.id)
-          ) || false;
-          return {
-            id: s.id,
-            label: s.name || s.label || s.id,
-            icon: s.img || s.icon || "",
-            active: isActive,
-          };
-        }) || [];
+      const conditionTypes = buildConditionTypes(
+        actor.effects ? [...actor.effects] : [],
+        CONFIG.statusEffects || [],
+      );
       const exhaustionLevel = system.attributes?.exhaustion || 0;
       const hasDefenses = resistances.length > 0 || immunities.length > 0 ||
         conditionImmunities.length > 0 || conditions.length > 0 || exhaustionLevel > 0;
