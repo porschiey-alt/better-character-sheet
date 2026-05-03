@@ -993,6 +993,13 @@ $radius-sm: 4px;
     border-bottom: 1px solid rgba($border-color, 0.5);
   }
 
+  .bcs-action-child {
+    padding-left: 24px;
+    border-bottom: none;
+    border-left: 2px solid var(--bcs-accent-dim);
+    margin-left: 10px;
+  }
+
   .bcs-action-feature-header {
     margin-bottom: 4px;
   }

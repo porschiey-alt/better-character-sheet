@@ -336,11 +336,25 @@ export function createBetterCharacterSheet(): any {
         }
 
         if (activitiesWithType.length > 1) {
-          // Multiple activities — create one entry per activity, uses only on first
-          let isFirst = true;
+          // Parent entry with uses/pips
+          const parentActType = activitiesWithType[0].activation?.type || "action";
+          actionFeatures.push({
+            id: i.id,
+            name: i.name,
+            img: i.img,
+            description: fullDesc,
+            truncatedDescription: truncated,
+            hasLongDescription: textOnly.length > 80,
+            activationType: typeMap[parentActType] || "action",
+            activationLabel: "",
+            uses,
+            pips,
+            isParent: true,
+          });
+          // Child activity entries without uses
           for (const act of activitiesWithType) {
             const at = act.activation?.type || "other";
-            const actDesc = act.description?.value || fullDesc;
+            const actDesc = act.description?.value || "";
             const actTextOnly = actDesc.replace(/<[^>]*>/g, "").trim();
             const actTruncated = actTextOnly.length > 80
               ? actTextOnly.substring(0, 80) + "…"
@@ -350,15 +364,15 @@ export function createBetterCharacterSheet(): any {
               activityId: act.id || act._id,
               name: act.name || i.name,
               img: i.img,
-              description: actDesc,
+              description: actDesc || fullDesc,
               truncatedDescription: actTruncated,
               hasLongDescription: actTextOnly.length > 80,
               activationType: typeMap[at] || "other",
               activationLabel: "",
-              uses: isFirst ? uses : null,
-              pips: isFirst ? pips : [],
+              uses: null,
+              pips: [],
+              isChild: true,
             });
-            isFirst = false;
           }
         } else {
           // Single activity or no activities — one entry for the whole item
@@ -2044,7 +2058,9 @@ export function createBetterCharacterSheet(): any {
       // Restore scroll position after render
       const newTabContent = this.element.querySelector(".bcs-tab-content") as HTMLElement;
       if (newTabContent && this._bcsScrollTop) {
-        newTabContent.scrollTop = this._bcsScrollTop;
+        requestAnimationFrame(() => {
+          newTabContent.scrollTop = this._bcsScrollTop;
+        });
       }
     }
 
