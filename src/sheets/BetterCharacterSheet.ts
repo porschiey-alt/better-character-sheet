@@ -1058,18 +1058,17 @@ export function createBetterCharacterSheet(): any {
             const itemId = itemEl?.dataset.itemId;
             if (!itemId) return;
             const item = actor.items.get(itemId);
-            if (!item?.system.uses?.max) return;
+            if (!item) return;
+            const usesMax = Number(item.system.uses?.max) || 0;
+            if (!usesMax) return;
+            const spent = Number(item.system.uses?.spent) || 0;
             const isFilled = el.classList.contains("filled");
-            const newVal = isFilled
-              ? Math.max(
-                  (item.system.uses.value || 0) - 1,
-                  0
-                )
-              : Math.min(
-                  (item.system.uses.value || 0) + 1,
-                  item.system.uses.max
-                );
-            item.update({ "system.uses.value": newVal });
+            // filled = available, clicking it = spend one
+            // not filled = spent, clicking it = recover one
+            const newSpent = isFilled
+              ? Math.min(spent + 1, usesMax)
+              : Math.max(spent - 1, 0);
+            item.update({ "system.uses.spent": newSpent });
           });
         });
 
