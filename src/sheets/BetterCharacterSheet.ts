@@ -591,6 +591,18 @@ export function createBetterCharacterSheet(): any {
         cp: system.currency?.cp ?? 0,
       };
 
+      // Attunement — items that require attunement
+      const attunableItems = actor.items
+        .filter((i: any) => i.system.attunement && i.system.attunement !== "none" && i.system.attunement !== "")
+        .map((i: any) => ({
+          id: i.id,
+          name: i.name,
+          img: i.img,
+          attuned: i.system.attuned ?? (i.system.attunement === "attuned"),
+        }));
+      const attunementMax = system.attributes?.attunement?.max ?? 3;
+      const attunementCount = attunableItems.filter((i: any) => i.attuned).length;
+
       // Resistances/Immunities for extras tab
       const dr = system.traits?.dr;
       const di = system.traits?.di;
@@ -638,6 +650,9 @@ export function createBetterCharacterSheet(): any {
         hasDefenses,
         showDeathSaves,
         currency,
+        attunableItems,
+        attunementMax,
+        attunementCount,
         backdropUrl,
         themeAccent: actor.getFlag("better-character-sheet", "themeAccent") || "#c8a85c",
         themeBg: actor.getFlag("better-character-sheet", "themeBg") || "#12151a",
@@ -1161,6 +1176,24 @@ export function createBetterCharacterSheet(): any {
               ? item.system.equipped?.value
               : item.system.equipped;
             item.update({ "system.equipped": !current });
+          });
+          (el as HTMLElement).style.cursor = "pointer";
+        });
+
+      // 19. Attunement toggle — click attune checkbox
+      this.element
+        .querySelectorAll(".bcs-attune-check")
+        .forEach((el: Element) => {
+          el.addEventListener("click", (e: Event) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const row = el.closest("[data-item-id]") as HTMLElement;
+            const itemId = row?.dataset.itemId;
+            if (!itemId) return;
+            const item = actor.items.get(itemId);
+            if (!item) return;
+            const isAttuned = item.system.attuned ?? (item.system.attunement === "attuned");
+            item.update({ "system.attuned": !isAttuned });
           });
           (el as HTMLElement).style.cursor = "pointer";
         });
