@@ -36,6 +36,43 @@
         <div class="bcs-stat-sublabel">Heroic</div>
       </div>
 
+      {{#if showDeathSaves}}
+      {{!-- Death Saves — replaces HP block when HP is 0 --}}
+      <div class="bcs-death-saves-inline">
+        <div class="bcs-ds-inline-header">
+          <div class="bcs-ds-inline-label"><i class="fas fa-skull"></i> Death Saves</div>
+          <div class="bcs-ds-hp-mini">
+            <span class="bcs-hp-current">0</span>
+            <span class="bcs-hp-sep">/</span>
+            <span class="bcs-hp-max">{{system.attributes.hp.effectiveMax}}</span>
+          </div>
+        </div>
+        <div class="bcs-ds-body">
+          <div class="bcs-ds-group">
+            <span class="bcs-ds-group-label success-label"><i class="fas fa-check"></i></span>
+            <span class="bcs-ds-pips">
+              <span class="bcs-ds-pip {{#if system.attributes.death.success}}success{{/if}}" data-ds-type="success" data-ds-index="1">●</span>
+              <span class="bcs-ds-pip {{#if (gte system.attributes.death.success 2)}}success{{/if}}" data-ds-type="success" data-ds-index="2">●</span>
+              <span class="bcs-ds-pip {{#if (gte system.attributes.death.success 3)}}success{{/if}}" data-ds-type="success" data-ds-index="3">●</span>
+            </span>
+          </div>
+          <div class="bcs-ds-group">
+            <span class="bcs-ds-group-label failure-label"><i class="fas fa-times"></i></span>
+            <span class="bcs-ds-pips">
+              <span class="bcs-ds-pip {{#if system.attributes.death.failure}}failure{{/if}}" data-ds-type="failure" data-ds-index="1">●</span>
+              <span class="bcs-ds-pip {{#if (gte system.attributes.death.failure 2)}}failure{{/if}}" data-ds-type="failure" data-ds-index="2">●</span>
+              <span class="bcs-ds-pip {{#if (gte system.attributes.death.failure 3)}}failure{{/if}}" data-ds-type="failure" data-ds-index="3">●</span>
+            </span>
+          </div>
+          <button type="button" class="bcs-ds-roll-btn" title="Roll Death Save">
+            <i class="fas fa-dice-d20"></i> Roll
+          </button>
+          <button type="button" class="bcs-hp-btn bcs-heal-btn bcs-ds-heal-btn" data-action="heal">
+            <i class="fas fa-heart"></i> Heal
+          </button>
+        </div>
+      </div>
+      {{else}}
       {{!-- HP Block: [Input] [Heal/Dmg buttons] [HP readout] --}}
       <div class="bcs-hp-block">
         <input type="number" class="bcs-hp-input" placeholder="0" data-hp-amount />
@@ -57,33 +94,6 @@
             <span class="bcs-hp-temp">{{system.attributes.hp.temp}}</span>
             <span class="bcs-hp-temp-label">temp</span>
           </div>
-        </div>
-      </div>
-
-      {{!-- Death Saves — visible when HP is 0 --}}
-      {{#if showDeathSaves}}
-      <div class="bcs-death-saves-inline">
-        <div class="bcs-ds-inline-label">Death Saves</div>
-        <div class="bcs-death-saves">
-          <span class="bcs-ds-label">
-            <i class="fas fa-check"></i>
-          </span>
-          <span class="bcs-ds-pips">
-            <span class="bcs-ds-pip {{#if system.attributes.death.success}}success{{/if}}" data-ds-type="success" data-ds-index="1">●</span>
-            <span class="bcs-ds-pip {{#if (gte system.attributes.death.success 2)}}success{{/if}}" data-ds-type="success" data-ds-index="2">●</span>
-            <span class="bcs-ds-pip {{#if (gte system.attributes.death.success 3)}}success{{/if}}" data-ds-type="success" data-ds-index="3">●</span>
-          </span>
-          <span class="bcs-ds-label">
-            <i class="fas fa-times"></i>
-          </span>
-          <span class="bcs-ds-pips">
-            <span class="bcs-ds-pip {{#if system.attributes.death.failure}}failure{{/if}}" data-ds-type="failure" data-ds-index="1">●</span>
-            <span class="bcs-ds-pip {{#if (gte system.attributes.death.failure 2)}}failure{{/if}}" data-ds-type="failure" data-ds-index="2">●</span>
-            <span class="bcs-ds-pip {{#if (gte system.attributes.death.failure 3)}}failure{{/if}}" data-ds-type="failure" data-ds-index="3">●</span>
-          </span>
-          <button type="button" class="bcs-ds-roll-btn" title="Roll Death Save">
-            <i class="fas fa-dice-d20"></i>
-          </button>
         </div>
       </div>
       {{/if}}

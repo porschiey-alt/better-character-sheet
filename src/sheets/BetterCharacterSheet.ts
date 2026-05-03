@@ -930,7 +930,19 @@ export function createBetterCharacterSheet(): any {
         .querySelectorAll(".bcs-ds-roll-btn")
         .forEach((el: Element) => {
           el.addEventListener("click", (e: Event) => {
+            e.stopPropagation();
             actor.rollDeathSave({ event: e, legacy: false });
+          });
+        });
+
+      // Death saves heal button — heal 1 HP to stabilize
+      this.element
+        .querySelectorAll(".bcs-ds-heal-btn")
+        .forEach((el: Element) => {
+          el.addEventListener("click", (e: Event) => {
+            e.stopPropagation();
+            e.preventDefault();
+            actor.applyDamage(-1);
           });
         });
 
