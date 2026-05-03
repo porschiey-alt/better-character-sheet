@@ -56,6 +56,13 @@ export function createBetterCharacterSheet(): any {
     _bcsActiveTab = "actions";
     // Persist scroll position across re-renders
     _bcsScrollTop = 0;
+
+    /** @override — save scroll position before DOM is replaced */
+    async _preRender(context: any, options: any) {
+      await super._preRender(context, options);
+      const tabContent = this.element?.querySelector(".bcs-tab-content") as HTMLElement;
+      if (tabContent) this._bcsScrollTop = tabContent.scrollTop;
+    }
     /** @override */
     async _prepareContext(options: any) {
       const context = await super._prepareContext(options);
@@ -695,10 +702,6 @@ export function createBetterCharacterSheet(): any {
 
     /** @override */
     async _onRender(context: any, options: any) {
-      // Save scroll position before DOM is replaced
-      const oldTabContent = this.element?.querySelector(".bcs-tab-content") as HTMLElement;
-      if (oldTabContent) this._bcsScrollTop = oldTabContent.scrollTop;
-
       // Skip dnd5e's _onRender (it expects DOM elements from its own templates).
       // Go directly to the Foundry framework's base _onRender.
       const baseProto =
