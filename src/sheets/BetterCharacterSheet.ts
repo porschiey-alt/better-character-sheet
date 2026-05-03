@@ -1843,13 +1843,14 @@ export function createBetterCharacterSheet(): any {
         if (castBtn) {
           delete castBtn.dataset.itemId;
           delete castBtn.dataset.activityId;
+          delete castBtn.dataset.openSheet;
           castBtn.innerHTML = `<i class="fas fa-magic"></i> Cast Spell`;
         }
         if (upcastDiv) upcastDiv.innerHTML = "";
       };
 
       if (panel && panelTitle && panelBody) {
-        // Feature descriptions — show full description + swap-out dropdown if applicable
+        // Feature descriptions — show full description + Edit button
         this.element
           .querySelectorAll(
             ".bcs-feature-desc-truncated, .bcs-action-feature-desc-truncated"
@@ -1859,44 +1860,19 @@ export function createBetterCharacterSheet(): any {
               const itemId = (el as HTMLElement).dataset.itemId;
               const item = (this as any).document.items.get(itemId);
               if (!item) return;
+
               panelTitle.textContent = item.name;
               panelBody.innerHTML =
                 item.system.description?.value || "";
 
               resetPanel();
 
-              // Check for swap-out choices (features with multiple activities)
-              const activities = item.system.activities;
-              if (activities && activities.size > 1) {
-                const choices: { id: string; name: string }[] = [];
-                for (const act of activities.values()) {
-                  if (act.name) choices.push({ id: act.id || act._id, name: act.name });
-                }
-                if (choices.length > 1) {
-                  const flagKey = `feature-config-${item.id}`;
-                  const currentChoice = actor.getFlag("better-character-sheet", flagKey) || "";
-                  let dropHtml = `<div class="bcs-detail-swap-config">`;
-                  dropHtml += `<label class="bcs-swap-label">Active Configuration</label>`;
-                  dropHtml += `<select class="bcs-swap-select" data-flag-key="${flagKey}">`;
-                  dropHtml += `<option value="">— Select —</option>`;
-                  for (const ch of choices) {
-                    const sel = ch.id === currentChoice ? "selected" : "";
-                    dropHtml += `<option value="${ch.id}" ${sel}>${ch.name}</option>`;
-                  }
-                  dropHtml += `</select></div>`;
-                  panelBody.insertAdjacentHTML("afterbegin", dropHtml);
-
-                  panelBody.querySelector(".bcs-swap-select")?.addEventListener("change", (e: Event) => {
-                    const sel = e.target as HTMLSelectElement;
-                    const key = sel.dataset.flagKey;
-                    if (!key) return;
-                    if (sel.value) {
-                      actor.setFlag("better-character-sheet", key, sel.value);
-                    } else {
-                      actor.unsetFlag("better-character-sheet", key);
-                    }
-                  });
-                }
+              // Show Edit Feature button to open native item sheet
+              if (panelActions) panelActions.style.display = "";
+              if (castBtn) {
+                castBtn.dataset.itemId = item.id;
+                castBtn.dataset.openSheet = "true";
+                castBtn.innerHTML = `<i class="fas fa-edit"></i> Edit Feature`;
               }
 
               panel.dataset.panel = "open";
@@ -1935,13 +1911,20 @@ export function createBetterCharacterSheet(): any {
             (el as HTMLElement).style.cursor = "pointer";
           });
 
-        // Cast/Use button — use the spell or activity stored by item id
+        // Cast/Use/Edit button — multipurpose action button in detail panel
         if (castBtn) {
           castBtn.addEventListener("click", (e: Event) => {
             const itemId = castBtn.dataset.itemId;
             if (!itemId) return;
             const item = actor.items.get(itemId);
             if (!item) return;
+
+            // Open native item sheet for Edit Feature
+            if (castBtn.dataset.openSheet === "true") {
+              item.sheet.render(true);
+              return;
+            }
+
             // If a specific activity is targeted, find and use it
             const activityId = castBtn.dataset.activityId;
             if (activityId && item.system.activities) {
