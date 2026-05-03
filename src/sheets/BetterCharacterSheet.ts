@@ -1049,7 +1049,9 @@ export function createBetterCharacterSheet(): any {
       this.element
         .querySelectorAll(".bcs-feat-pip")
         .forEach((el: Element) => {
-          el.addEventListener("click", () => {
+          el.addEventListener("click", (e: Event) => {
+            e.stopPropagation();
+            e.preventDefault();
             const itemEl = el.closest(
               "[data-item-id]"
             ) as HTMLElement;
@@ -1058,8 +1060,6 @@ export function createBetterCharacterSheet(): any {
             const item = actor.items.get(itemId);
             if (!item?.system.uses?.max) return;
             const isFilled = el.classList.contains("filled");
-            // filled = available, clicking it = consume one
-            // not filled = used up, clicking it = restore one
             const newVal = isFilled
               ? Math.max(
                   (item.system.uses.value || 0) - 1,

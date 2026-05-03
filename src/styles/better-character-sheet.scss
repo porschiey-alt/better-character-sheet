@@ -1023,6 +1023,8 @@ $radius-sm: 4px;
     align-items: center;
     gap: 3px;
     margin-top: 6px;
+    position: relative;
+    z-index: 2;
   }
 
   .bcs-action-feature-timing {
