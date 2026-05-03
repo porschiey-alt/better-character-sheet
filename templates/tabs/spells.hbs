@@ -20,6 +20,13 @@
   </div>
   {{/if}}
 
+  {{!-- Manage Spells button --}}
+  {{#if showManageSpells}}
+  <div class="bcs-manage-spells-bar">
+    <button type="button" class="bcs-manage-spells-btn"><i class="fas fa-book-open"></i> Manage Spells</button>
+  </div>
+  {{/if}}
+
   {{!-- Level filter pills --}}
   <div class="bcs-spell-filters">
     <button class="bcs-filter-pill active" data-spell-filter="all">ALL</button>

@@ -160,6 +160,15 @@ export function createBetterCharacterSheet(): any {
           };
         });
 
+      // Spell management: detect prepared casters
+      const preparedCasterIds = new Set(["wizard", "cleric", "druid", "paladin"]);
+      const spellcastingClass = classItems.find((c: any) => {
+        const id = c.system?.identifier?.toLowerCase();
+        return id && preparedCasterIds.has(id) && c.system?.spellcasting?.ability;
+      });
+      const showManageSpells = !!spellcastingClass;
+      const isWizard = spellcastingClass?.system?.identifier?.toLowerCase() === "wizard";
+
       // Spell level labels (used by both attacks and spells sections)
       const levelLabels = [
         "Cantrips",
@@ -558,6 +567,8 @@ export function createBetterCharacterSheet(): any {
         spellcasting,
         spellSlots,
         spellsByLevel,
+        showManageSpells,
+        isWizard,
         inventoryGroups,
         hasInventory,
         encumbrance,
@@ -1110,6 +1121,195 @@ export function createBetterCharacterSheet(): any {
             });
           });
         });
+
+      // Manage Spells panel
+      const managePanel = this.element.querySelector(".bcs-manage-panel") as HTMLElement;
+      const manageBody = this.element.querySelector(".bcs-manage-body") as HTMLElement;
+      const manageClose = this.element.querySelector(".bcs-manage-close");
+      const wizardAddSection = this.element.querySelector(".bcs-manage-wizard-add") as HTMLElement;
+      const manageSearch = this.element.querySelector(".bcs-manage-search") as HTMLInputElement;
+      const manageLevelFilter = this.element.querySelector(".bcs-manage-level-filter") as HTMLSelectElement;
+      const searchResults = this.element.querySelector(".bcs-manage-search-results") as HTMLElement;
+
+      if (managePanel && manageBody) {
+        const levelLabelsShort = ["Cantrips", "1st Level", "2nd Level", "3rd Level", "4th Level",
+          "5th Level", "6th Level", "7th Level", "8th Level", "9th Level"];
+
+        // Detect caster type from context
+        const preparedCasterIds = new Set(["wizard", "cleric", "druid", "paladin"]);
+        const castingClass = actor.items?.find((i: any) => {
+          const id = i.system?.identifier?.toLowerCase();
+          return i.type === "class" && id && preparedCasterIds.has(id) && i.system?.spellcasting?.ability;
+        });
+        const isWizardClass = castingClass?.system?.identifier?.toLowerCase() === "wizard";
+
+        // Build the manage panel spell list
+        const populateManagePanel = () => {
+          const allSpells = [...actor.items].filter((i: any) => i.type === "spell");
+          const grouped: Record<number, any[]> = {};
+          for (const sp of allSpells) {
+            const lvl = sp.system.level ?? 0;
+            if (!grouped[lvl]) grouped[lvl] = [];
+            grouped[lvl].push(sp);
+          }
+          let html = "";
+          const sortedLevels = Object.keys(grouped).map(Number).sort((a, b) => a - b);
+          for (const lvl of sortedLevels) {
+            const spells = grouped[lvl].sort((a: any, b: any) => a.name.localeCompare(b.name));
+            html += `<div class="bcs-manage-level-group">`;
+            html += `<div class="bcs-manage-level-label">${levelLabelsShort[lvl] || `Level ${lvl}`}</div>`;
+            for (const sp of spells) {
+              const isCantrip = lvl === 0;
+              const method = sp.system.method;
+              const isAlwaysOn = method === "always" || method === "innate" || method === "atwill" || method === "pact";
+              const isPrepared = !!sp.system.prepared;
+              const showToggle = !isCantrip && !isAlwaysOn;
+              const checkedClass = isPrepared ? "prepared" : "";
+              const alwaysLabel = isCantrip ? "Always" : isAlwaysOn ? method.charAt(0).toUpperCase() + method.slice(1) : "";
+              const ritual = sp.system.properties?.has?.("ritual");
+
+              html += `<div class="bcs-manage-spell-row" data-item-id="${sp.id}">`;
+              if (showToggle) {
+                html += `<span class="bcs-manage-prep-toggle ${checkedClass}" data-item-id="${sp.id}" title="Toggle prepared"></span>`;
+              } else {
+                html += `<span class="bcs-manage-prep-label">${alwaysLabel}</span>`;
+              }
+              html += `<img src="${sp.img || "icons/svg/mystery-man.svg"}" alt="" class="bcs-manage-spell-icon" />`;
+              html += `<span class="bcs-manage-spell-name">${sp.name}`;
+              if (ritual) html += ` <span class="bcs-spell-icon" title="Ritual">ℛ</span>`;
+              html += `</span>`;
+              if (isWizardClass && !isCantrip) {
+                html += `<button class="bcs-manage-remove-btn" data-item-id="${sp.id}" title="Remove from spellbook"><i class="fas fa-times"></i></button>`;
+              }
+              html += `</div>`;
+            }
+            html += `</div>`;
+          }
+          if (!sortedLevels.length) {
+            html = `<div class="bcs-empty-state">No spells on this character</div>`;
+          }
+          manageBody.innerHTML = html;
+
+          // Bind prep toggles
+          manageBody.querySelectorAll(".bcs-manage-prep-toggle").forEach((el: Element) => {
+            el.addEventListener("click", async () => {
+              const itemId = (el as HTMLElement).dataset.itemId;
+              if (!itemId) return;
+              const item = actor.items.get(itemId);
+              if (!item) return;
+              await item.update({ "system.prepared": !item.system.prepared });
+              populateManagePanel();
+            });
+            (el as HTMLElement).style.cursor = "pointer";
+          });
+
+          // Bind remove buttons (wizard only)
+          manageBody.querySelectorAll(".bcs-manage-remove-btn").forEach((el: Element) => {
+            el.addEventListener("click", async (e: Event) => {
+              e.stopPropagation();
+              const itemId = (el as HTMLElement).dataset.itemId;
+              if (!itemId) return;
+              const item = actor.items.get(itemId);
+              if (!item) return;
+              const confirmed = await Dialog.confirm({
+                title: "Remove Spell",
+                content: `<p>Remove <strong>${item.name}</strong> from your spellbook?</p>`,
+              });
+              if (confirmed) {
+                await item.delete();
+                populateManagePanel();
+              }
+            });
+          });
+        };
+
+        // Open panel
+        this.element.querySelector(".bcs-manage-spells-btn")?.addEventListener("click", () => {
+          populateManagePanel();
+          if (wizardAddSection && isWizardClass) wizardAddSection.style.display = "";
+          managePanel.dataset.panel = "open";
+        });
+
+        // Close panel
+        manageClose?.addEventListener("click", () => {
+          managePanel.dataset.panel = "closed";
+          if (wizardAddSection) wizardAddSection.style.display = "none";
+          if (searchResults) searchResults.innerHTML = "";
+        });
+
+        // Wizard: spell search from compendium
+        if (isWizardClass && manageSearch && searchResults) {
+          let searchTimeout: any = null;
+
+          const doSearch = async () => {
+            const query = manageSearch.value.trim().toLowerCase();
+            const levelVal = manageLevelFilter?.value || "all";
+            if (query.length < 2) { searchResults.innerHTML = ""; return; }
+
+            const pack = (game as any).packs?.get("dnd5e.spells");
+            if (!pack) {
+              searchResults.innerHTML = `<div class="bcs-empty-state">Spell compendium not found</div>`;
+              return;
+            }
+
+            const index = await pack.getIndex({ fields: ["system.level", "system.school"] });
+            const ownedNames = new Set(
+              [...actor.items].filter((i: any) => i.type === "spell").map((i: any) => `${i.name}::${i.system.level ?? 0}`)
+            );
+
+            const matches = [...index].filter((entry: any) => {
+              if (!entry.name.toLowerCase().includes(query)) return false;
+              const lvl = entry.system?.level ?? 0;
+              if (lvl === 0) return false; // can't add cantrips this way
+              if (levelVal !== "all" && lvl !== Number(levelVal)) return false;
+              if (ownedNames.has(`${entry.name}::${lvl}`)) return false;
+              return true;
+            }).slice(0, 20);
+
+            if (!matches.length) {
+              searchResults.innerHTML = `<div class="bcs-empty-state">No matching spells found</div>`;
+              return;
+            }
+
+            let html = "";
+            for (const m of matches) {
+              const lvlLabel = levelLabelsShort[m.system?.level] || `Level ${m.system?.level}`;
+              html += `<div class="bcs-manage-search-result" data-pack-id="${m._id}">`;
+              html += `<img src="${m.img || "icons/svg/mystery-man.svg"}" alt="" class="bcs-manage-spell-icon" />`;
+              html += `<div class="bcs-manage-result-info">`;
+              html += `<span class="bcs-manage-spell-name">${m.name}</span>`;
+              html += `<span class="bcs-manage-result-level">${lvlLabel}</span>`;
+              html += `</div>`;
+              html += `<button class="bcs-manage-add-btn" data-pack-id="${m._id}" title="Add to spellbook"><i class="fas fa-plus"></i></button>`;
+              html += `</div>`;
+            }
+            searchResults.innerHTML = html;
+
+            // Bind add buttons
+            searchResults.querySelectorAll(".bcs-manage-add-btn").forEach((el: Element) => {
+              el.addEventListener("click", async (e: Event) => {
+                e.stopPropagation();
+                const packId = (el as HTMLElement).dataset.packId;
+                if (!packId) return;
+                const doc = await pack.getDocument(packId);
+                if (!doc) return;
+                const data = doc.toObject();
+                data.system.method = "prepared";
+                data.system.prepared = false;
+                await actor.createEmbeddedDocuments("Item", [data]);
+                doSearch(); // refresh results to remove now-owned spell
+                populateManagePanel(); // refresh spell list
+              });
+            });
+          };
+
+          manageSearch.addEventListener("input", () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(doSearch, 300);
+          });
+          manageLevelFilter?.addEventListener("change", () => doSearch());
+        }
+      }
 
       // 13. Feature use pips — click to toggle used/available
       this.element
