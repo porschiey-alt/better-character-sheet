@@ -646,14 +646,14 @@ export function createBetterCharacterSheet(): any {
       this.document.longRest();
     }
 
-    static #onHeal(this: any) {
+    static async #onHeal(this: any) {
       const input = this.element.querySelector(
         ".bcs-hp-input"
       ) as HTMLInputElement;
       const val = parseInt(input?.value || "0", 10);
       if (val > 0) {
-        this.document.applyDamage(-val);
-        this.document.update({ "system.attributes.death.success": 0, "system.attributes.death.failure": 0 });
+        await this.document.applyDamage(-val);
+        await this.document.update({ "system.attributes.death.success": 0, "system.attributes.death.failure": 0 });
         if (input) input.value = "";
       }
     }
@@ -940,11 +940,11 @@ export function createBetterCharacterSheet(): any {
       this.element
         .querySelectorAll(".bcs-ds-heal-btn")
         .forEach((el: Element) => {
-          el.addEventListener("click", (e: Event) => {
+          el.addEventListener("click", async (e: Event) => {
             e.stopPropagation();
             e.preventDefault();
-            actor.applyDamage(-1);
-            actor.update({ "system.attributes.death.success": 0, "system.attributes.death.failure": 0 });
+            await actor.applyDamage(-1);
+            await actor.update({ "system.attributes.death.success": 0, "system.attributes.death.failure": 0 });
           });
         });
 
@@ -976,11 +976,11 @@ export function createBetterCharacterSheet(): any {
       this.element
         .querySelectorAll(".bcs-heal-btn")
         .forEach((el: Element) => {
-          el.addEventListener("click", () => {
+          el.addEventListener("click", async () => {
             const val = parseInt(hpInput?.value || "0", 10);
             if (val > 0) {
-              actor.applyDamage(-val);
-              actor.update({ "system.attributes.death.success": 0, "system.attributes.death.failure": 0 });
+              await actor.applyDamage(-val);
+              await actor.update({ "system.attributes.death.success": 0, "system.attributes.death.failure": 0 });
               if (hpInput) hpInput.value = "";
             }
           });
