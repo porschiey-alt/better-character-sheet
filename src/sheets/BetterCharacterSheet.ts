@@ -71,12 +71,15 @@ export function createBetterCharacterSheet(): any {
     // Persist manage panel state across re-renders
     _bcsManagePanelOpen = false;
     _bcsLearnPanelOpen = false;
+    _bcsManageScrollTop = 0;
 
     /** @override — save scroll position before DOM is replaced */
     async _preRender(context: any, options: any) {
       await super._preRender(context, options);
       const tabContent = this.element?.querySelector(".bcs-tab-content") as HTMLElement;
       if (tabContent) this._bcsScrollTop = tabContent.scrollTop;
+      const manageBody = this.element?.querySelector(".bcs-manage-body") as HTMLElement;
+      if (manageBody) this._bcsManageScrollTop = manageBody.scrollTop;
     }
     /** @override */
     async _prepareContext(options: any) {
@@ -1283,6 +1286,8 @@ export function createBetterCharacterSheet(): any {
           managePanel.dataset.panel = "open";
           if (isWizardClass && learnBar) learnBar.style.display = "";
           if (this._bcsLearnPanelOpen && learnSection) learnSection.style.display = "";
+          // Restore scroll position after re-render
+          if (this._bcsManageScrollTop) manageBody.scrollTop = this._bcsManageScrollTop;
         }
 
         // Open panel
