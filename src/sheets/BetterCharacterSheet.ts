@@ -926,13 +926,119 @@ export function createBetterCharacterSheet(): any {
             const panelTitle = this.element.querySelector(".bcs-detail-title") as HTMLElement;
             const panelBody = this.element.querySelector(".bcs-detail-body") as HTMLElement;
             const panelActions = this.element.querySelector(".bcs-detail-actions") as HTMLElement;
+            const panelMeta = this.element.querySelector(".bcs-detail-spell-meta") as HTMLElement;
             const castBtn = this.element.querySelector(".bcs-detail-cast-btn") as HTMLElement;
+            const upcastDiv = this.element.querySelector(".bcs-detail-upcast") as HTMLElement;
             if (!panel || !panelTitle || !panelBody) return;
+
+            // Title
             panelTitle.textContent = item.name;
+
+            // Spell metadata
+            if (panelMeta) {
+              const sp = item.system;
+              const props = sp.properties;
+              const lvl = sp.level ?? 0;
+              const levelLabel = lvl === 0 ? "Cantrip" : `Level ${lvl}`;
+              const school = sp.school ? (CONFIG as any).DND5E?.spellSchools?.[sp.school]?.label || sp.school : "";
+
+              // Cast time
+              const actType = sp.activation?.type || "";
+              const actVal = sp.activation?.value ?? "";
+              const timeLabels: Record<string, string> = {
+                action: "Action", bonus: "Bonus Action", reaction: "Reaction",
+                minute: "Minute", hour: "Hour",
+              };
+              const castTime = actVal && actVal !== 1
+                ? `${actVal} ${timeLabels[actType] || actType}s`
+                : timeLabels[actType] || actType || "—";
+
+              // Range
+              const rng = sp.range;
+              let range = "—";
+              if (rng?.value) range = `${rng.value} ${rng.units || "ft."}`;
+              else if (rng?.units === "touch") range = "Touch";
+              else if (rng?.units === "self") range = "Self";
+
+              // Area of effect
+              const target = sp.target;
+              let aoe = "";
+              if (target?.template?.type) {
+                const size = target.template.size || "";
+                const aoeType = target.template.type || "";
+                aoe = size ? `${size} ft. ${aoeType}` : aoeType;
+              }
+
+              // Duration
+              const dur = sp.duration;
+              let duration = "Instantaneous";
+              if (dur?.value && dur?.units) {
+                duration = `${dur.value} ${dur.units}`;
+              } else if (dur?.units === "instantaneous" || dur?.units === "inst") {
+                duration = "Instantaneous";
+              } else if (dur?.units === "special") {
+                duration = "Special";
+              } else if (dur?.units) {
+                duration = dur.units;
+              }
+
+              // Components
+              const comps: string[] = [];
+              if (props?.has?.("vocal")) comps.push("V");
+              if (props?.has?.("somatic")) comps.push("S");
+              if (props?.has?.("material")) comps.push("M");
+              const materials = sp.materials?.value || "";
+
+              // Tags
+              const tags: string[] = [];
+              if (props?.has?.("concentration")) tags.push("Concentration");
+              if (props?.has?.("ritual")) tags.push("Ritual");
+
+              let metaHtml = `<div class="bcs-spell-meta-grid">`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Level</span><span class="bcs-meta-value">${levelLabel}${school ? ` (${school})` : ""}</span></div>`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Casting Time</span><span class="bcs-meta-value">${castTime}</span></div>`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Range</span><span class="bcs-meta-value">${range}</span></div>`;
+              if (aoe) metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Area</span><span class="bcs-meta-value">${aoe}</span></div>`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Duration</span><span class="bcs-meta-value">${duration}</span></div>`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Components</span><span class="bcs-meta-value">${comps.join(", ") || "None"}${materials ? ` (${materials})` : ""}</span></div>`;
+              if (tags.length) metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Tags</span><span class="bcs-meta-value">${tags.map(t => `<span class="bcs-meta-tag">${t}</span>`).join(" ")}</span></div>`;
+              metaHtml += `</div>`;
+              panelMeta.innerHTML = metaHtml;
+              panelMeta.style.display = "";
+            }
+
+            // Description
             panelBody.innerHTML = item.system.description?.value || "";
-            // Show cast button and bind to this spell
+
+            // Cast button
             if (panelActions) panelActions.style.display = "";
             if (castBtn) castBtn.dataset.itemId = item.id;
+
+            // Upcast buttons
+            if (upcastDiv) {
+              const spellLevel = item.system.level ?? 0;
+              if (spellLevel > 0) {
+                const slots = actor.system.spells || {};
+                const upcastButtons: string[] = [];
+                for (let lvl = spellLevel + 1; lvl <= 9; lvl++) {
+                  const slotData = slots[`spell${lvl}`];
+                  if (slotData && slotData.max > 0) {
+                    const available = slotData.value ?? 0;
+                    const disabled = available <= 0 ? "disabled" : "";
+                    upcastButtons.push(
+                      `<button class="bcs-upcast-btn" data-item-id="${item.id}" data-level="${lvl}" ${disabled}>` +
+                      `Lv ${lvl} <span class="bcs-upcast-slots">(${available}/${slotData.max})</span></button>`
+                    );
+                  }
+                }
+                upcastDiv.innerHTML = upcastButtons.length
+                  ? `<div class="bcs-upcast-label">Upcast</div><div class="bcs-upcast-grid">${upcastButtons.join("")}</div>`
+                  : "";
+              } else {
+                upcastDiv.innerHTML = "";
+              }
+            }
+
             panel.dataset.panel = "open";
           });
           (el as HTMLElement).style.cursor = "pointer";
@@ -1349,12 +1455,25 @@ export function createBetterCharacterSheet(): any {
       const panelActions = this.element.querySelector(
         ".bcs-detail-actions"
       ) as HTMLElement;
+      const panelMeta = this.element.querySelector(
+        ".bcs-detail-spell-meta"
+      ) as HTMLElement;
       const castBtn = this.element.querySelector(
         ".bcs-detail-cast-btn"
       ) as HTMLElement;
+      const upcastDiv = this.element.querySelector(
+        ".bcs-detail-upcast"
+      ) as HTMLElement;
+
+      const resetPanel = () => {
+        if (panelActions) panelActions.style.display = "none";
+        if (panelMeta) { panelMeta.style.display = "none"; panelMeta.innerHTML = ""; }
+        if (castBtn) delete castBtn.dataset.itemId;
+        if (upcastDiv) upcastDiv.innerHTML = "";
+      };
 
       if (panel && panelTitle && panelBody) {
-        // Feature descriptions — hide cast button
+        // Feature descriptions — hide spell-specific sections
         this.element
           .querySelectorAll(
             ".bcs-feature-desc-truncated, .bcs-action-feature-desc-truncated"
@@ -1367,8 +1486,7 @@ export function createBetterCharacterSheet(): any {
               panelTitle.textContent = item.name;
               panelBody.innerHTML =
                 item.system.description?.value || "";
-              if (panelActions) panelActions.style.display = "none";
-              if (castBtn) delete castBtn.dataset.itemId;
+              resetPanel();
               panel.dataset.panel = "open";
             });
           });
@@ -1389,10 +1507,28 @@ export function createBetterCharacterSheet(): any {
           });
         }
 
+        // Upcast buttons — delegate click from the upcast container
+        if (upcastDiv) {
+          upcastDiv.addEventListener("click", (e: Event) => {
+            const btn = (e.target as HTMLElement).closest(".bcs-upcast-btn") as HTMLElement;
+            if (!btn || btn.hasAttribute("disabled")) return;
+            const itemId = btn.dataset.itemId;
+            const slotLevel = Number(btn.dataset.level);
+            if (!itemId || !slotLevel) return;
+            const item = actor.items.get(itemId);
+            if (!item) return;
+            const activity = item.system.activities?.values()?.next()?.value;
+            if (activity) {
+              activity.use({ event: e, legacy: false, slotLevel });
+            } else {
+              item.use({ event: e, legacy: false, slotLevel });
+            }
+          });
+        }
+
         panelClose?.addEventListener("click", () => {
           panel.dataset.panel = "closed";
-          if (panelActions) panelActions.style.display = "none";
-          if (castBtn) delete castBtn.dataset.itemId;
+          resetPanel();
         });
       }
 
