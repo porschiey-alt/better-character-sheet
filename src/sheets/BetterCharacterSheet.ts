@@ -1168,33 +1168,8 @@ export function createBetterCharacterSheet(): any {
           (el as HTMLElement).style.cursor = "pointer";
         });
 
-      // 8 & 9. Heal/Damage buttons
-      const hpInput = this.element.querySelector(
-        ".bcs-hp-input"
-      ) as HTMLInputElement;
-      this.element
-        .querySelectorAll(".bcs-heal-btn")
-        .forEach((el: Element) => {
-          el.addEventListener("click", async () => {
-            const val = parseInt(hpInput?.value || "0", 10);
-            if (val > 0) {
-              await actor.applyDamage(-val);
-              await actor.update({ "system.attributes.death.success": 0, "system.attributes.death.failure": 0 });
-              if (hpInput) hpInput.value = "";
-            }
-          });
-        });
-      this.element
-        .querySelectorAll(".bcs-damage-btn")
-        .forEach((el: Element) => {
-          el.addEventListener("click", () => {
-            const val = parseInt(hpInput?.value || "0", 10);
-            if (val > 0) {
-              actor.applyDamage(val);
-              if (hpInput) hpInput.value = "";
-            }
-          });
-        });
+      // 8 & 9. Heal/Damage — handled by static actions (#onHeal, #onDamage)
+      // via data-action="heal" / data-action="damage" on the template buttons.
 
       // 11. Inspiration toggle
       this.element
