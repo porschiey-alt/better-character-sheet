@@ -1055,6 +1055,16 @@ export function createBetterCharacterSheet(): any {
             const upcastDiv = this.element.querySelector(".bcs-detail-upcast") as HTMLElement;
             if (!panel || !panelTitle || !panelBody) return;
 
+            // Reset stale state from previous panel interactions
+            if (panelActions) panelActions.style.display = "none";
+            if (panelMeta) { panelMeta.style.display = "none"; panelMeta.innerHTML = ""; }
+            if (castBtn) {
+              delete castBtn.dataset.openSheet;
+              delete castBtn.dataset.activityId;
+              castBtn.innerHTML = '<i class="fas fa-magic"></i> Cast Spell';
+            }
+            if (upcastDiv) upcastDiv.innerHTML = "";
+
             // Title
             panelTitle.textContent = item.name;
 
