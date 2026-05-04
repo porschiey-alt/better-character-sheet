@@ -194,8 +194,46 @@ describe("isSpellAvailable", () => {
     expect(isSpellAvailable({ system: { level: 1, method: "prepared", prepared: false } })).toBe(false);
   });
 
-  it("unknown method defaults to available", () => {
+  it("unknown method with prepared true is available", () => {
+    expect(isSpellAvailable({ system: { level: 1, method: "something-else", prepared: true } })).toBe(true);
+  });
+
+  it("unknown method with prepared false is unavailable", () => {
+    expect(isSpellAvailable({ system: { level: 1, method: "something-else", prepared: false } })).toBe(false);
+  });
+
+  it("unknown method with no prepared flag is available", () => {
     expect(isSpellAvailable({ system: { level: 1, method: "something-else" } })).toBe(true);
+  });
+
+  it("no method with prepared true is available", () => {
+    expect(isSpellAvailable({ system: { level: 1, prepared: true } })).toBe(true);
+  });
+
+  it("no method with prepared false is unavailable", () => {
+    expect(isSpellAvailable({ system: { level: 1, prepared: false } })).toBe(false);
+  });
+
+  it("no method with no prepared flag is available", () => {
+    expect(isSpellAvailable({ system: { level: 1 } })).toBe(true);
+  });
+
+  it("prepared truthy value (1) is treated as available", () => {
+    expect(isSpellAvailable({ system: { level: 1, method: "prepared", prepared: 1 } })).toBe(true);
+  });
+
+  it("prepared falsy value (0) is treated as unavailable", () => {
+    expect(isSpellAvailable({ system: { level: 1, method: "prepared", prepared: 0 } })).toBe(false);
+  });
+
+  it("unprepared ritual spell is still available", () => {
+    const props = new Set(["ritual"]);
+    expect(isSpellAvailable({ system: { level: 1, method: "prepared", prepared: false, properties: props } })).toBe(true);
+  });
+
+  it("unprepared non-ritual spell is unavailable", () => {
+    const props = new Set(["vocal", "somatic"]);
+    expect(isSpellAvailable({ system: { level: 1, method: "prepared", prepared: false, properties: props } })).toBe(false);
   });
 });
 

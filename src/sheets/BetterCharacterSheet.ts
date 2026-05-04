@@ -68,12 +68,18 @@ export function createBetterCharacterSheet(): any {
     _bcsActiveTab = "actions";
     // Persist scroll position across re-renders
     _bcsScrollTop = 0;
+    // Persist manage panel state across re-renders
+    _bcsManagePanelOpen = false;
+    _bcsLearnPanelOpen = false;
+    _bcsManageScrollTop = 0;
 
     /** @override — save scroll position before DOM is replaced */
     async _preRender(context: any, options: any) {
       await super._preRender(context, options);
       const tabContent = this.element?.querySelector(".bcs-tab-content") as HTMLElement;
       if (tabContent) this._bcsScrollTop = tabContent.scrollTop;
+      const manageBody = this.element?.querySelector(".bcs-manage-body") as HTMLElement;
+      if (manageBody) this._bcsManageScrollTop = manageBody.scrollTop;
     }
     /** @override */
     async _prepareContext(options: any) {
@@ -159,6 +165,27 @@ export function createBetterCharacterSheet(): any {
             attack: (system.attributes.prof ?? 0) + abilityMod,
           };
         });
+
+      // Spell management: detect prepared casters
+      const preparedCasterIds = new Set(["wizard", "cleric", "druid", "paladin"]);
+      const spellcastingClass = classItems.find((c: any) => {
+        const id = c.system?.identifier?.toLowerCase();
+        return id && preparedCasterIds.has(id) && c.system?.spellcasting?.ability;
+      });
+      const showManageSpells = !!spellcastingClass;
+      const isWizard = spellcastingClass?.system?.identifier?.toLowerCase() === "wizard";
+
+      // Max prepared spells — use dnd5e's computed value from the class
+      let maxPreparedSpells = 0;
+      if (spellcastingClass) {
+        maxPreparedSpells = spellcastingClass.system.spellcasting?.preparation?.max ?? 0;
+        if (!maxPreparedSpells) {
+          const scAbility = spellcastingClass.system.spellcasting.ability;
+          const abilityMod = system.abilities?.[scAbility]?.mod ?? 0;
+          const classLevel = spellcastingClass.system.levels ?? 1;
+          maxPreparedSpells = Math.max(1, abilityMod + classLevel);
+        }
+      }
 
       // Spell level labels (used by both attacks and spells sections)
       const levelLabels = [
@@ -259,68 +286,135 @@ export function createBetterCharacterSheet(): any {
       }
 
       // Build action features (feats with activation or uses, with descriptions + pips)
-      const actionFeatures = actor.items
-        .filter(
-          (i: any) =>
-            i.type === "feat" &&
-            (i.system.uses?.max || i.system.activation?.type || i.system.activities?.size > 0)
-        )
-        .map((i: any) => {
-          const uses = i.system.uses?.max
-            ? {
-                value: i.system.uses.value ?? 0,
-                max: i.system.uses.max,
-                per: i.system.uses.recovery?.[0]?.type || "",
-              }
-            : null;
-          const pips: { filled: boolean }[] = [];
-          if (uses) {
-            for (let p = 0; p < uses.max; p++) {
-              pips.push({ filled: p < uses.value });
+      const actionFeatures: any[] = [];
+      for (const i of actor.items.filter(
+        (i: any) =>
+          i.type === "feat" &&
+          (i.system.uses?.max || i.system.activation?.type || i.system.activities?.size > 0)
+      )) {
+        const uses = i.system.uses?.max
+          ? {
+              value: i.system.uses.value ?? 0,
+              max: i.system.uses.max,
+              spent: Number(i.system.uses.spent) || 0,
+              per: i.system.uses.recovery?.[0]?.type || "",
+            }
+          : null;
+        const pips: { filled: boolean }[] = [];
+        if (uses) {
+          for (let p = 0; p < uses.max; p++) {
+            // Spent pips on the left, remaining on the right
+            pips.push({ filled: p >= uses.spent });
+          }
+        }
+
+        const fullDesc = i.system.description?.value || "";
+        const textOnly = fullDesc.replace(/<[^>]*>/g, "").trim();
+        const truncated = textOnly.length > 80
+          ? textOnly.substring(0, 80) + "…"
+          : textOnly;
+
+        const typeMap: Record<string, string> = {
+          action: "action", bonus: "bonus", reaction: "reaction",
+          minute: "other", hour: "other", special: "other",
+        };
+        const labelMap: Record<string, string> = {
+          minute: `${i.system.activation?.value || ""} Minutes`,
+          hour: `${i.system.activation?.value || ""} Hours`,
+        };
+
+        // Expand: create an entry per activity that has an activation type
+        const activities = i.system.activities;
+        const activitiesWithType: any[] = [];
+        if (activities && activities.size > 0) {
+          for (const act of activities.values()) {
+            const at = act.activation?.type;
+            if (at && typeMap[at] && typeMap[at] !== "other") {
+              activitiesWithType.push(act);
             }
           }
+        }
 
-          // Resolve activation type: check item level first, then activities
-          let actType = i.system.activation?.type || "";
-          if (!actType && i.system.activities) {
-            for (const act of i.system.activities.values()) {
-              if (act.activation?.type) {
-                actType = act.activation.type;
-                break;
-              }
-            }
-          }
-          actType = actType || "other";
-
-          const typeMap: Record<string, string> = {
-            action: "action", bonus: "bonus", reaction: "reaction",
-            minute: "other", hour: "other", special: "other",
-          };
-          const activationType = typeMap[actType] || "other";
-          const labelMap: Record<string, string> = {
-            minute: `${i.system.activation?.value || ""} Minutes`,
-            hour: `${i.system.activation?.value || ""} Hours`,
-          };
-          const fullDesc = i.system.description?.value || "";
-          const textOnly = fullDesc.replace(/<[^>]*>/g, "").trim();
-          const truncated = textOnly.length > 80
-            ? textOnly.substring(0, 80) + "…"
-            : textOnly;
-
-          return {
+        if (activitiesWithType.length > 1) {
+          // Parent entry with uses/pips
+          const parentActType = activitiesWithType[0].activation?.type || "action";
+          actionFeatures.push({
             id: i.id,
             name: i.name,
             img: i.img,
             description: fullDesc,
             truncatedDescription: truncated,
             hasLongDescription: textOnly.length > 80,
-            activationType,
-            activationLabel: labelMap[actType] || "",
+            activationType: typeMap[parentActType] || "action",
+            activationLabel: "",
             uses,
             pips,
-          };
-        })
-        .filter((f: any) => f.activationType !== "other" || f.uses);
+            isParent: true,
+          });
+          // Child activity entries without uses
+          for (const act of activitiesWithType) {
+            const at = act.activation?.type || "other";
+            // Build a description from activity fields
+            let actDesc = act.description?.value || "";
+            if (!actDesc) {
+              // Synthesize a brief summary from activity data
+              const parts: string[] = [];
+              if (act.activation?.type) {
+                const atLabel: Record<string, string> = { action: "Action", bonus: "Bonus Action", reaction: "Reaction" };
+                parts.push(atLabel[act.activation.type] || act.activation.type);
+              }
+              if (act.damage?.parts?.length) {
+                const dmg = act.damage.parts[0];
+                if (dmg.formula) parts.push(`Damage: ${dmg.formula}`);
+              }
+              if (act.range?.value) parts.push(`Range: ${act.range.value} ${act.range.units || "ft."}`);
+              actDesc = parts.join(" · ");
+            }
+            const actTextOnly = actDesc.replace(/<[^>]*>/g, "").trim();
+            const actTruncated = actTextOnly.length > 80
+              ? actTextOnly.substring(0, 80) + "…"
+              : actTextOnly;
+            actionFeatures.push({
+              id: i.id,
+              activityId: act.id || act._id,
+              name: act.name || i.name,
+              img: i.img,
+              description: actDesc || fullDesc,
+              truncatedDescription: actTruncated,
+              hasLongDescription: actTextOnly.length > 80,
+              activationType: typeMap[at] || "other",
+              activationLabel: "",
+              uses: null,
+              pips: [],
+              isChild: true,
+            });
+          }
+        } else {
+          // Single activity or no activities — one entry for the whole item
+          let actType = i.system.activation?.type || "";
+          if (!actType && activitiesWithType.length === 1) {
+            actType = activitiesWithType[0].activation?.type || "";
+          }
+          actType = actType || "other";
+          const activationType = typeMap[actType] || "other";
+
+          // Only include if it has a real activation type or limited uses
+          if (activationType !== "other" || uses) {
+            actionFeatures.push({
+              id: i.id,
+              name: i.name,
+              img: i.img,
+              description: fullDesc,
+              truncatedDescription: truncated,
+              hasLongDescription: textOnly.length > 80,
+              activationType,
+              activationLabel: labelMap[actType] || "",
+              uses,
+              pips,
+            });
+          }
+        }
+      }
 
       // Categorize spells by activation type for the action tab sections
       const allSpellItems = actor.items.filter(
@@ -431,13 +525,14 @@ export function createBetterCharacterSheet(): any {
           ? {
               value: i.system.uses.value ?? 0,
               max: i.system.uses.max,
+              spent: Number(i.system.uses.spent) || 0,
               per: i.system.uses.recovery?.[0]?.type || "",
             }
           : null;
         const pips: { filled: boolean }[] = [];
         if (uses) {
           for (let p = 0; p < uses.max; p++) {
-            pips.push({ filled: p < uses.value });
+            pips.push({ filled: p >= uses.spent });
           }
         }
         const fullDesc = i.system.description?.value || "";
@@ -446,6 +541,31 @@ export function createBetterCharacterSheet(): any {
         const truncated = textOnly.length > 80
           ? textOnly.substring(0, 80) + "…"
           : textOnly;
+
+        // Extract activities with activation types (action/bonus/reaction)
+        const activationLabels: Record<string, string> = {
+          action: "Action", bonus: "Bonus Action", reaction: "Reaction",
+        };
+        const subActions: any[] = [];
+        if (i.system.activities?.size > 0) {
+          for (const act of i.system.activities.values()) {
+            const actType = act.activation?.type || act.type;
+            if (activationLabels[actType]) {
+              const actDesc = act.description?.value || "";
+              const actTextOnly = actDesc.replace(/<[^>]*>/g, "").trim();
+              const actTruncated = actTextOnly.length > 60
+                ? actTextOnly.substring(0, 60) + "…"
+                : actTextOnly;
+              subActions.push({
+                id: act.id || act._id,
+                name: act.name || i.name,
+                activationLabel: activationLabels[actType],
+                truncatedDescription: actTruncated,
+                itemId: i.id,
+              });
+            }
+          }
+        }
 
         return {
           id: i.id,
@@ -457,6 +577,7 @@ export function createBetterCharacterSheet(): any {
           hasLongDescription: textOnly.length > 80,
           uses,
           pips,
+          subActions,
         };
       }
 
@@ -558,6 +679,9 @@ export function createBetterCharacterSheet(): any {
         spellcasting,
         spellSlots,
         spellsByLevel,
+        showManageSpells,
+        isWizard,
+        maxPreparedSpells,
         inventoryGroups,
         hasInventory,
         encumbrance,
@@ -894,23 +1018,152 @@ export function createBetterCharacterSheet(): any {
           });
         });
 
-      // 6 & 7. Attack/spell rolls — click attack row or spell row to use the item
+      // 6. Attack rolls — click attack row to use the item
       this.element
         .querySelectorAll(
-          ".bcs-attack-row[data-item-id], .bcs-spell-row[data-item-id]"
+          ".bcs-attack-row[data-item-id]"
         )
         .forEach((el: Element) => {
           el.addEventListener("click", (e: Event) => {
             const itemId = (el as HTMLElement).dataset.itemId;
             const item = actor.items.get(itemId);
             if (!item) return;
-            // Use the first activity, or fall back to item.use()
             const activity = item.system.activities?.values()?.next()?.value;
             if (activity) {
               activity.use({ event: e, legacy: false });
             } else {
               item.use({ event: e, legacy: false });
             }
+          });
+          (el as HTMLElement).style.cursor = "pointer";
+        });
+
+      // 7. Spell rows — click to open detail panel with description + cast button
+      this.element
+        .querySelectorAll(".bcs-spell-row[data-item-id]")
+        .forEach((el: Element) => {
+          el.addEventListener("click", () => {
+            const itemId = (el as HTMLElement).dataset.itemId;
+            const item = actor.items.get(itemId);
+            if (!item) return;
+            const panel = this.element.querySelector(".bcs-detail-panel") as HTMLElement;
+            const panelTitle = this.element.querySelector(".bcs-detail-title") as HTMLElement;
+            const panelBody = this.element.querySelector(".bcs-detail-body") as HTMLElement;
+            const panelActions = this.element.querySelector(".bcs-detail-actions") as HTMLElement;
+            const panelMeta = this.element.querySelector(".bcs-detail-spell-meta") as HTMLElement;
+            const castBtn = this.element.querySelector(".bcs-detail-cast-btn") as HTMLElement;
+            const upcastDiv = this.element.querySelector(".bcs-detail-upcast") as HTMLElement;
+            if (!panel || !panelTitle || !panelBody) return;
+
+            // Title
+            panelTitle.textContent = item.name;
+
+            // Spell metadata
+            if (panelMeta) {
+              const sp = item.system;
+              const props = sp.properties;
+              const lvl = sp.level ?? 0;
+              const levelLabel = lvl === 0 ? "Cantrip" : `Level ${lvl}`;
+              const school = sp.school ? (CONFIG as any).DND5E?.spellSchools?.[sp.school]?.label || sp.school : "";
+
+              // Cast time
+              const actType = sp.activation?.type || "";
+              const actVal = sp.activation?.value ?? "";
+              const timeLabels: Record<string, string> = {
+                action: "Action", bonus: "Bonus Action", reaction: "Reaction",
+                minute: "Minute", hour: "Hour",
+              };
+              const castTime = actVal && actVal !== 1
+                ? `${actVal} ${timeLabels[actType] || actType}s`
+                : timeLabels[actType] || actType || "—";
+
+              // Range
+              const rng = sp.range;
+              let range = "—";
+              if (rng?.value) range = `${rng.value} ${rng.units || "ft."}`;
+              else if (rng?.units === "touch") range = "Touch";
+              else if (rng?.units === "self") range = "Self";
+
+              // Area of effect
+              const target = sp.target;
+              let aoe = "";
+              if (target?.template?.type) {
+                const size = target.template.size || "";
+                const aoeType = target.template.type || "";
+                aoe = size ? `${size} ft. ${aoeType}` : aoeType;
+              }
+
+              // Duration
+              const dur = sp.duration;
+              let duration = "Instantaneous";
+              if (dur?.value && dur?.units) {
+                duration = `${dur.value} ${dur.units}`;
+              } else if (dur?.units === "instantaneous" || dur?.units === "inst") {
+                duration = "Instantaneous";
+              } else if (dur?.units === "special") {
+                duration = "Special";
+              } else if (dur?.units) {
+                duration = dur.units;
+              }
+
+              // Components
+              const comps: string[] = [];
+              if (props?.has?.("vocal")) comps.push("V");
+              if (props?.has?.("somatic")) comps.push("S");
+              if (props?.has?.("material")) comps.push("M");
+              const materials = sp.materials?.value || "";
+
+              // Tags
+              const tags: string[] = [];
+              if (props?.has?.("concentration")) tags.push("Concentration");
+              if (props?.has?.("ritual")) tags.push("Ritual");
+
+              let metaHtml = `<div class="bcs-spell-meta-grid">`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Level</span><span class="bcs-meta-value">${levelLabel}${school ? ` (${school})` : ""}</span></div>`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Casting Time</span><span class="bcs-meta-value">${castTime}</span></div>`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Range</span><span class="bcs-meta-value">${range}</span></div>`;
+              if (aoe) metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Area</span><span class="bcs-meta-value">${aoe}</span></div>`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Duration</span><span class="bcs-meta-value">${duration}</span></div>`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Components</span><span class="bcs-meta-value">${comps.join(", ") || "None"}${materials ? ` (${materials})` : ""}</span></div>`;
+              if (tags.length) metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Tags</span><span class="bcs-meta-value">${tags.map(t => `<span class="bcs-meta-tag">${t}</span>`).join(" ")}</span></div>`;
+              metaHtml += `</div>`;
+              panelMeta.innerHTML = metaHtml;
+              panelMeta.style.display = "";
+            }
+
+            // Description
+            panelBody.innerHTML = item.system.description?.value || "";
+
+            // Cast button
+            if (panelActions) panelActions.style.display = "";
+            if (castBtn) castBtn.dataset.itemId = item.id;
+
+            // Upcast buttons
+            if (upcastDiv) {
+              const spellLevel = item.system.level ?? 0;
+              if (spellLevel > 0) {
+                const slots = actor.system.spells || {};
+                const upcastButtons: string[] = [];
+                for (let lvl = spellLevel + 1; lvl <= 9; lvl++) {
+                  const slotData = slots[`spell${lvl}`];
+                  if (slotData && slotData.max > 0) {
+                    const available = slotData.value ?? 0;
+                    const disabled = available <= 0 ? "disabled" : "";
+                    upcastButtons.push(
+                      `<button class="bcs-upcast-btn" data-item-id="${item.id}" data-level="${lvl}" ${disabled}>` +
+                      `Lv ${lvl} <span class="bcs-upcast-slots">(${available}/${slotData.max})</span></button>`
+                    );
+                  }
+                }
+                upcastDiv.innerHTML = upcastButtons.length
+                  ? `<div class="bcs-upcast-label">Upcast</div><div class="bcs-upcast-grid">${upcastButtons.join("")}</div>`
+                  : "";
+              } else {
+                upcastDiv.innerHTML = "";
+              }
+            }
+
+            panel.dataset.panel = "open";
           });
           (el as HTMLElement).style.cursor = "pointer";
         });
@@ -982,7 +1235,325 @@ export function createBetterCharacterSheet(): any {
           });
         });
 
-      // 13. Feature use pips — click to toggle used/available
+      // Manage Spells panel
+      const managePanel = this.element.querySelector(".bcs-manage-panel") as HTMLElement;
+      const manageBody = this.element.querySelector(".bcs-manage-body") as HTMLElement;
+      const manageClose = this.element.querySelector(".bcs-manage-close");
+      const learnSection = this.element.querySelector(".bcs-manage-wizard-add") as HTMLElement;
+      const learnSearch = this.element.querySelector(".bcs-manage-search") as HTMLInputElement;
+      const learnLevelFilter = this.element.querySelector(".bcs-manage-level-filter") as HTMLSelectElement;
+      const learnResults = this.element.querySelector(".bcs-manage-search-results") as HTMLElement;
+      const learnBar = this.element.querySelector(".bcs-manage-learn-bar") as HTMLElement;
+      const learnToggleBtn = this.element.querySelector(".bcs-manage-learn-toggle") as HTMLElement;
+
+      if (managePanel && manageBody) {
+        const lvlLabels = ["Cantrips", "1st Level", "2nd Level", "3rd Level", "4th Level",
+          "5th Level", "6th Level", "7th Level", "8th Level", "9th Level"];
+
+        // Detect caster type from context
+        const prepCasterIds = new Set(["wizard", "cleric", "druid", "paladin"]);
+        const castingClass = actor.items?.find((i: any) => {
+          const id = i.system?.identifier?.toLowerCase();
+          return i.type === "class" && id && prepCasterIds.has(id) && i.system?.spellcasting?.ability;
+        });
+        const isWizardClass = castingClass?.system?.identifier?.toLowerCase() === "wizard";
+
+        // Max prepared spells — use dnd5e's computed value from the class
+        let maxPrep = 0;
+        if (castingClass) {
+          maxPrep = castingClass.system.spellcasting?.preparation?.max ?? 0;
+          // Fallback to ability mod + level if system doesn't provide max
+          if (!maxPrep) {
+            const scAbility = castingClass.system.spellcasting.ability;
+            const abilMod = actor.system.abilities?.[scAbility]?.mod ?? 0;
+            const classLvl = castingClass.system.levels ?? 1;
+            maxPrep = Math.max(1, abilMod + classLvl);
+          }
+        }
+
+        // Count prepared spells that count against the max.
+        // Uses preparation.mode to distinguish user-prepared from always-on.
+        // Excludes cantrips and always-on spells.
+        const countPrepared = () => {
+          return [...actor.items].filter((i: any) => {
+            if (i.type !== "spell") return false;
+            if ((i.system.level ?? 0) === 0) return false;
+            const mode = i.system.preparation?.mode;
+            if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return false;
+            return !!i.system.preparation?.prepared;
+          }).length;
+        };
+
+        // Pending prep changes — toggled locally, flushed on panel close
+        const pendingPrep = new Map<string, boolean>();
+
+        // Get effective prepared state (pending override or actual)
+        const isEffectivelyPrepared = (sp: any) => {
+          if (pendingPrep.has(sp.id)) return pendingPrep.get(sp.id);
+          return !!sp.system.preparation?.prepared;
+        };
+
+        // Count prepared including pending changes
+        const countPreparedWithPending = () => {
+          return [...actor.items].filter((i: any) => {
+            if (i.type !== "spell") return false;
+            if ((i.system.level ?? 0) === 0) return false;
+            const mode = i.system.preparation?.mode;
+            if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return false;
+            return isEffectivelyPrepared(i);
+          }).length;
+        };
+
+        // Flush all pending prep changes to Foundry
+        const flushPendingPrep = async () => {
+          if (pendingPrep.size === 0) return;
+          const updates = [...pendingPrep.entries()].map(([id, prepared]) => ({
+            _id: id, "system.preparation.prepared": prepared,
+          }));
+          pendingPrep.clear();
+          await actor.updateEmbeddedDocuments("Item", updates);
+        };
+
+        // Pending spell additions (wizard) — flushed on panel close
+        const pendingAddDocs: any[] = [];
+        const pendingAddIds = new Set<string>();
+
+        const flushPendingAdds = async () => {
+          if (pendingAddDocs.length === 0) return;
+          const docs = [...pendingAddDocs];
+          pendingAddDocs.length = 0;
+          pendingAddIds.clear();
+          await actor.createEmbeddedDocuments("Item", docs);
+        };
+
+        // Build the manage panel spell list
+        const populateManagePanel = () => {
+          // Save scroll position before repopulating
+          const scrollTop = manageBody.scrollTop;
+
+          const allSpells = [...actor.items].filter((i: any) => i.type === "spell");
+          const grouped: Record<number, any[]> = {};
+          for (const sp of allSpells) {
+            const lvl = sp.system.level ?? 0;
+            if (!grouped[lvl]) grouped[lvl] = [];
+            grouped[lvl].push(sp);
+          }
+          const prepCount = countPreparedWithPending();
+          const atMax = maxPrep > 0 && prepCount >= maxPrep;
+
+          let html = `<div class="bcs-manage-prep-counter">Prepared: <strong>${prepCount}</strong> / <strong>${maxPrep}</strong></div>`;
+          const sortedLevels = Object.keys(grouped).map(Number).sort((a, b) => a - b);
+          for (const lvl of sortedLevels) {
+            const spells = grouped[lvl].sort((a: any, b: any) => a.name.localeCompare(b.name));
+            html += `<div class="bcs-manage-level-group">`;
+            html += `<div class="bcs-manage-level-label">${lvlLabels[lvl] || `Level ${lvl}`}</div>`;
+            for (const sp of spells) {
+              const isCantrip = lvl === 0;
+              const prepMode = sp.system.preparation?.mode;
+              const isAlwaysOn = prepMode === "always" || prepMode === "innate" || prepMode === "atwill" || prepMode === "pact";
+              const isPrepared = isEffectivelyPrepared(sp);
+              const showToggle = !isCantrip && !isAlwaysOn;
+              const checkedClass = isPrepared ? "prepared" : "";
+              const disabledClass = !isPrepared && atMax && showToggle ? "disabled" : "";
+              const alwaysLabel = isCantrip ? "Always" : isAlwaysOn ? "Always" : "";
+              const ritual = sp.system.properties?.has?.("ritual");
+
+              html += `<div class="bcs-manage-spell-row" data-item-id="${sp.id}">`;
+              if (showToggle) {
+                html += `<span class="bcs-manage-prep-check ${checkedClass} ${disabledClass}" data-item-id="${sp.id}" title="${disabledClass ? "Max prepared reached" : "Toggle prepared"}"></span>`;
+              } else {
+                html += `<span class="bcs-manage-prep-label">${alwaysLabel}</span>`;
+              }
+              html += `<img src="${sp.img || "icons/svg/mystery-man.svg"}" alt="" class="bcs-manage-spell-icon" />`;
+              html += `<span class="bcs-manage-spell-name">${sp.name}`;
+              if (ritual) html += ` <span class="bcs-spell-icon" title="Ritual">ℛ</span>`;
+              html += `</span>`;
+              if (isWizardClass && !isCantrip) {
+                html += `<button class="bcs-manage-remove-btn" data-item-id="${sp.id}" title="Remove from spellbook"><i class="fas fa-trash-alt"></i></button>`;
+              }
+              html += `</div>`;
+            }
+            html += `</div>`;
+          }
+          if (!sortedLevels.length) {
+            html += `<div class="bcs-empty-state">No spells on this character</div>`;
+          }
+          manageBody.innerHTML = html;
+          manageBody.scrollTop = scrollTop;
+
+          // Bind prep toggles — local toggle, no server update
+          manageBody.querySelectorAll(".bcs-manage-prep-check:not(.disabled)").forEach((el: Element) => {
+            el.addEventListener("click", (e: Event) => {
+              e.stopPropagation();
+              const itemId = (el as HTMLElement).dataset.itemId;
+              if (!itemId) return;
+              const sp = actor.items.get(itemId);
+              if (!sp) return;
+              const currentlyPrepped = isEffectivelyPrepared(sp);
+              pendingPrep.set(itemId, !currentlyPrepped);
+              populateManagePanel();
+            });
+            (el as HTMLElement).style.cursor = "pointer";
+          });
+
+          // Bind remove buttons (wizard only)
+          manageBody.querySelectorAll(".bcs-manage-remove-btn").forEach((el: Element) => {
+            el.addEventListener("click", async (e: Event) => {
+              e.stopPropagation();
+              const itemId = (el as HTMLElement).dataset.itemId;
+              if (!itemId) return;
+              const item = actor.items.get(itemId);
+              if (!item) return;
+              const confirmed = await Dialog.confirm({
+                title: "Remove Spell",
+                content: `<p>Remove <strong>${item.name}</strong> from your spellbook?</p>`,
+              });
+              if (confirmed) {
+                await item.delete();
+                populateManagePanel();
+              }
+            });
+          });
+        };
+
+        // Restore panel state after re-render
+        if (this._bcsManagePanelOpen) {
+          populateManagePanel();
+          managePanel.dataset.panel = "open";
+          if (isWizardClass && learnBar) learnBar.style.display = "";
+          if (this._bcsLearnPanelOpen && learnSection) learnSection.style.display = "";
+          // Restore scroll position after re-render
+          if (this._bcsManageScrollTop) manageBody.scrollTop = this._bcsManageScrollTop;
+        }
+
+        // Open panel
+        this.element.querySelector(".bcs-manage-spells-btn")?.addEventListener("click", () => {
+          populateManagePanel();
+          if (isWizardClass && learnBar) learnBar.style.display = "";
+          this._bcsManagePanelOpen = true;
+          managePanel.dataset.panel = "open";
+        });
+
+        // Close panel — flush pending prep changes and spell additions
+        manageClose?.addEventListener("click", async () => {
+          managePanel.dataset.panel = "closed";
+          this._bcsManagePanelOpen = false;
+          this._bcsLearnPanelOpen = false;
+          if (learnSection) learnSection.style.display = "none";
+          if (learnBar) learnBar.style.display = "none";
+          if (learnResults) learnResults.innerHTML = "";
+          await flushPendingAdds();
+          await flushPendingPrep();
+        });
+
+        // Wizard: "Learn New Spells" toggle
+        if (learnToggleBtn) {
+          learnToggleBtn.addEventListener("click", () => {
+            if (!learnSection) return;
+            const isOpen = learnSection.style.display !== "none";
+            learnSection.style.display = isOpen ? "none" : "";
+            this._bcsLearnPanelOpen = !isOpen;
+            if (!isOpen) populateLearnList();
+          });
+        }
+
+        // Wizard: learn spells list + search/filter
+        const populateLearnList = async () => {
+          if (!learnResults) return;
+          const learnScrollTop = learnResults.scrollTop;
+          const pack = (game as any).packs?.get("dnd5e.spells");
+          if (!pack) {
+            learnResults.innerHTML = `<div class="bcs-empty-state">Spell compendium not found</div>`;
+            return;
+          }
+          // Determine highest spell slot level the actor can cast
+          const slots = actor.system.spells || {};
+          let maxSlotLevel = 0;
+          for (let i = 1; i <= 9; i++) {
+            if (slots[`spell${i}`]?.max > 0) maxSlotLevel = i;
+          }
+
+          const index = await pack.getIndex({ fields: ["system.level", "system.school"] });
+          const ownedNames = new Set(
+            [...actor.items].filter((i: any) => i.type === "spell").map((i: any) => `${i.name}::${i.system.level ?? 0}`)
+          );
+          // Also count pending adds as owned
+          for (const doc of pendingAddDocs) {
+            ownedNames.add(`${doc.name}::${doc.system?.level ?? 0}`);
+          }
+          const query = learnSearch?.value?.trim().toLowerCase() || "";
+          const levelVal = learnLevelFilter?.value || "all";
+
+          const matches = [...index].filter((entry: any) => {
+            const lvl = entry.system?.level ?? 0;
+            if (lvl === 0) return false;
+            if (maxSlotLevel > 0 && lvl > maxSlotLevel) return false;
+            if (levelVal !== "all" && lvl !== Number(levelVal)) return false;
+            if (query && !entry.name.toLowerCase().includes(query)) return false;
+            return true;
+          }).sort((a: any, b: any) => {
+            const lvlDiff = (a.system?.level ?? 0) - (b.system?.level ?? 0);
+            return lvlDiff !== 0 ? lvlDiff : a.name.localeCompare(b.name);
+          }).slice(0, 50);
+
+          if (!matches.length) {
+            learnResults.innerHTML = `<div class="bcs-empty-state">No matching spells found</div>`;
+            return;
+          }
+
+          let html = "";
+          let currentLvl = -1;
+          for (const m of matches) {
+            const lvl = m.system?.level ?? 0;
+            if (lvl !== currentLvl) {
+              currentLvl = lvl;
+              html += `<div class="bcs-manage-level-label" style="margin-top:8px;">${lvlLabels[lvl] || `Level ${lvl}`}</div>`;
+            }
+            const owned = ownedNames.has(`${m.name}::${lvl}`);
+            const justAdded = pendingAddIds.has(m._id);
+            html += `<div class="bcs-manage-search-result ${owned ? "owned" : ""}">`;
+            html += `<img src="${m.img || "icons/svg/mystery-man.svg"}" alt="" class="bcs-manage-spell-icon" />`;
+            html += `<span class="bcs-manage-spell-name">${m.name}</span>`;
+            if (owned || justAdded) {
+              html += `<span class="bcs-manage-owned-badge">${justAdded ? "Added" : "In Book"}</span>`;
+            } else {
+              html += `<button class="bcs-manage-add-btn" data-pack-id="${m._id}" title="Add to spellbook"><i class="fas fa-plus"></i> Add</button>`;
+            }
+            html += `</div>`;
+          }
+          learnResults.innerHTML = html;
+          learnResults.scrollTop = learnScrollTop;
+
+          // Bind add buttons — local queue, no server call
+          learnResults.querySelectorAll(".bcs-manage-add-btn").forEach((el: Element) => {
+            el.addEventListener("click", async (e: Event) => {
+              e.stopPropagation();
+              const packId = (el as HTMLElement).dataset.packId;
+              if (!packId || pendingAddIds.has(packId)) return;
+              const doc = await pack.getDocument(packId);
+              if (!doc) return;
+              const data = doc.toObject();
+              data.system.preparation = { mode: "prepared", prepared: false };
+              pendingAddDocs.push(data);
+              pendingAddIds.add(packId);
+              populateLearnList();
+            });
+          });
+        };
+
+        if (isWizardClass && learnSearch && learnResults) {
+          let searchTimeout: any = null;
+          learnSearch.addEventListener("input", () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(populateLearnList, 300);
+          });
+          learnLevelFilter?.addEventListener("change", () => populateLearnList());
+        }
+      }
+
+      // 13. Feature use pips — click to toggle, update DOM in-place
+      const pendingUsesChanges = new Map<string, number>();
+
       this.element
         .querySelectorAll(".bcs-feat-pip")
         .forEach((el: Element) => {
@@ -998,16 +1569,45 @@ export function createBetterCharacterSheet(): any {
             if (!item) return;
             const usesMax = Number(item.system.uses?.max) || 0;
             if (!usesMax) return;
-            const spent = Number(item.system.uses?.spent) || 0;
+
+            // Get current spent (pending override or actual)
+            const currentSpent = pendingUsesChanges.has(itemId)
+              ? pendingUsesChanges.get(itemId)!
+              : (Number(item.system.uses?.spent) || 0);
+
             const isFilled = el.classList.contains("filled");
-            // filled = available, clicking it = spend one
-            // not filled = spent, clicking it = recover one
             const newSpent = isFilled
-              ? Math.min(spent + 1, usesMax)
-              : Math.max(spent - 1, 0);
-            item.update({ "system.uses.spent": newSpent });
+              ? Math.min(currentSpent + 1, usesMax)
+              : Math.max(currentSpent - 1, 0);
+            pendingUsesChanges.set(itemId, newSpent);
+
+            // Update all pips for this item in-place
+            const allPipContainers = this.element.querySelectorAll(`[data-item-id="${itemId}"]`);
+            allPipContainers.forEach((container: Element) => {
+              const pips = container.querySelectorAll(".bcs-feat-pip");
+              pips.forEach((pip: Element, idx: number) => {
+                if (idx >= newSpent) {
+                  pip.classList.add("filled");
+                } else {
+                  pip.classList.remove("filled");
+                }
+              });
+            });
           });
         });
+
+      // Flush pending uses changes on tab change
+      const flushPendingUses = async () => {
+        if (pendingUsesChanges.size === 0) return;
+        const updates = [...pendingUsesChanges.entries()].map(([id, spent]) => ({
+          _id: id, "system.uses.spent": spent,
+        }));
+        pendingUsesChanges.clear();
+        await actor.updateEmbeddedDocuments("Item", updates);
+      };
+      this.element.querySelectorAll(".bcs-tab-btn").forEach((btn: Element) => {
+        btn.addEventListener("click", () => flushPendingUses());
+      });
 
       // Combat actions — click to post description to chat
       this.element
@@ -1323,8 +1923,33 @@ export function createBetterCharacterSheet(): any {
         ".bcs-detail-body"
       ) as HTMLElement;
       const panelClose = this.element.querySelector(".bcs-detail-close");
+      const panelActions = this.element.querySelector(
+        ".bcs-detail-actions"
+      ) as HTMLElement;
+      const panelMeta = this.element.querySelector(
+        ".bcs-detail-spell-meta"
+      ) as HTMLElement;
+      const castBtn = this.element.querySelector(
+        ".bcs-detail-cast-btn"
+      ) as HTMLElement;
+      const upcastDiv = this.element.querySelector(
+        ".bcs-detail-upcast"
+      ) as HTMLElement;
+
+      const resetPanel = () => {
+        if (panelActions) panelActions.style.display = "none";
+        if (panelMeta) { panelMeta.style.display = "none"; panelMeta.innerHTML = ""; }
+        if (castBtn) {
+          delete castBtn.dataset.itemId;
+          delete castBtn.dataset.activityId;
+          delete castBtn.dataset.openSheet;
+          castBtn.innerHTML = `<i class="fas fa-magic"></i> Cast Spell`;
+        }
+        if (upcastDiv) upcastDiv.innerHTML = "";
+      };
 
       if (panel && panelTitle && panelBody) {
+        // Feature descriptions — show full description + Edit or Use button
         this.element
           .querySelectorAll(
             ".bcs-feature-desc-truncated, .bcs-action-feature-desc-truncated"
@@ -1332,17 +1957,130 @@ export function createBetterCharacterSheet(): any {
           .forEach((el: Element) => {
             el.addEventListener("click", () => {
               const itemId = (el as HTMLElement).dataset.itemId;
+              const activityId = (el as HTMLElement).dataset.activityId;
               const item = (this as any).document.items.get(itemId);
               if (!item) return;
-              panelTitle.textContent = item.name;
-              panelBody.innerHTML =
-                item.system.description?.value || "";
+
+              resetPanel();
+
+              // If a specific activity is referenced, show that activity's details + Use
+              if (activityId && item.system.activities) {
+                let activity: any = null;
+                for (const act of item.system.activities.values()) {
+                  if ((act.id || act._id) === activityId) { activity = act; break; }
+                }
+                panelTitle.textContent = activity?.name || item.name;
+                panelBody.innerHTML = activity?.description?.value || item.system.description?.value || "";
+                if (panelActions) panelActions.style.display = "";
+                if (castBtn) {
+                  castBtn.dataset.itemId = item.id;
+                  castBtn.dataset.activityId = activityId;
+                  castBtn.innerHTML = `<i class="fas fa-bolt"></i> Use`;
+                }
+              } else {
+                // Generic feature — show description + Edit button
+                panelTitle.textContent = item.name;
+                panelBody.innerHTML = item.system.description?.value || "";
+                if (panelActions) panelActions.style.display = "";
+                if (castBtn) {
+                  castBtn.dataset.itemId = item.id;
+                  castBtn.dataset.openSheet = "true";
+                  castBtn.innerHTML = `<i class="fas fa-edit"></i> Edit Feature`;
+                }
+              }
+
               panel.dataset.panel = "open";
             });
           });
 
+        // Feature sub-actions — open detail panel with Use button
+        this.element
+          .querySelectorAll(".bcs-feature-subaction")
+          .forEach((el: Element) => {
+            el.addEventListener("click", () => {
+              const itemId = (el as HTMLElement).dataset.itemId;
+              const activityId = (el as HTMLElement).dataset.activityId;
+              const item = (this as any).document.items.get(itemId);
+              if (!item) return;
+              // Find the specific activity
+              let activity: any = null;
+              if (activityId && item.system.activities) {
+                for (const act of item.system.activities.values()) {
+                  if ((act.id || act._id) === activityId) { activity = act; break; }
+                }
+              }
+              panelTitle.textContent = activity?.name || item.name;
+              const actDesc = activity?.description?.value || item.system.description?.value || "";
+              panelBody.innerHTML = actDesc;
+              resetPanel();
+              // Show Use button with the activity
+              if (panelActions) panelActions.style.display = "";
+              if (castBtn) {
+                castBtn.dataset.itemId = item.id;
+                if (activityId) castBtn.dataset.activityId = activityId;
+                castBtn.innerHTML = `<i class="fas fa-bolt"></i> Use`;
+              }
+              panel.dataset.panel = "open";
+            });
+            (el as HTMLElement).style.cursor = "pointer";
+          });
+
+        // Cast/Use/Edit button — multipurpose action button in detail panel
+        if (castBtn) {
+          castBtn.addEventListener("click", (e: Event) => {
+            const itemId = castBtn.dataset.itemId;
+            if (!itemId) return;
+            const item = actor.items.get(itemId);
+            if (!item) return;
+
+            // Open native item sheet for Edit Feature
+            if (castBtn.dataset.openSheet === "true") {
+              item.sheet.render(true);
+              return;
+            }
+
+            // If a specific activity is targeted, find and use it
+            const activityId = castBtn.dataset.activityId;
+            if (activityId && item.system.activities) {
+              for (const act of item.system.activities.values()) {
+                if ((act.id || act._id) === activityId) {
+                  act.use({ event: e, legacy: false });
+                  return;
+                }
+              }
+            }
+            // Default: first activity or item.use()
+            const activity = item.system.activities?.values()?.next()?.value;
+            if (activity) {
+              activity.use({ event: e, legacy: false });
+            } else {
+              item.use({ event: e, legacy: false });
+            }
+          });
+        }
+
+        // Upcast buttons — delegate click from the upcast container
+        if (upcastDiv) {
+          upcastDiv.addEventListener("click", (e: Event) => {
+            const btn = (e.target as HTMLElement).closest(".bcs-upcast-btn") as HTMLElement;
+            if (!btn || btn.hasAttribute("disabled")) return;
+            const itemId = btn.dataset.itemId;
+            const slotLevel = Number(btn.dataset.level);
+            if (!itemId || !slotLevel) return;
+            const item = actor.items.get(itemId);
+            if (!item) return;
+            const activity = item.system.activities?.values()?.next()?.value;
+            if (activity) {
+              activity.use({ event: e, legacy: false, slotLevel });
+            } else {
+              item.use({ event: e, legacy: false, slotLevel });
+            }
+          });
+        }
+
         panelClose?.addEventListener("click", () => {
           panel.dataset.panel = "closed";
+          resetPanel();
         });
       }
 
@@ -1363,9 +2101,12 @@ export function createBetterCharacterSheet(): any {
       );
 
       // Restore scroll position after render
-      const newTabContent = this.element.querySelector(".bcs-tab-content") as HTMLElement;
-      if (newTabContent && this._bcsScrollTop) {
-        newTabContent.scrollTop = this._bcsScrollTop;
+      const savedScrollTop = this._bcsScrollTop;
+      if (savedScrollTop > 0) {
+        setTimeout(() => {
+          const tc = this.element?.querySelector(".bcs-tab-content") as HTMLElement;
+          if (tc) tc.scrollTop = savedScrollTop;
+        }, 10);
       }
     }
 
@@ -1385,6 +2126,18 @@ export function createBetterCharacterSheet(): any {
       el.style.setProperty("--bcs-accent", color);
       // Dimmed version for borders
       el.style.setProperty("--bcs-accent-dim", this._darkenColor(color, 0.4));
+      // Contrast text color for buttons with accent background
+      el.style.setProperty("--bcs-accent-text", this._contrastTextColor(color));
+    }
+
+    // Return black or white depending on which has better contrast with the given hex color
+    _contrastTextColor(hex: string): string {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      // Relative luminance (WCAG formula)
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return luminance > 0.5 ? "#000000" : "#ffffff";
     }
 
     _applyBgColor(color: string) {

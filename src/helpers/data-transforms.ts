@@ -154,13 +154,33 @@ export function resolveFormula(formula: string, rollData: Record<string, any>): 
 
 /**
  * Determine if a spell should be shown as available (prepared/always/innate/etc).
+ * Uses both legacy fields (method/prepared) and v5.3.2 fields (preparation.mode/prepared).
+ * Ritual spells that are learned (have a prepared property) always show even if not prepped.
  */
 export function isSpellAvailable(spell: any): boolean {
   const lvl = spell.system.level ?? 0;
   if (lvl === 0) return true;
-  const mode = spell.system.method;
-  if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return true;
-  if (mode === "prepared") return !!spell.system.prepared;
+
+  // Check v5.3.2 preparation.mode first
+  const prepMode = spell.system.preparation?.mode;
+  if (prepMode === "always" || prepMode === "innate" || prepMode === "atwill" || prepMode === "pact") return true;
+
+  // Legacy method field
+  const method = spell.system.method;
+  if (method === "always" || method === "innate" || method === "atwill" || method === "pact") return true;
+
+  // Check if prepared via either field
+  const isPrepared = !!(spell.system.preparation?.prepared) || !!(spell.system.prepared);
+  if (isPrepared) return true;
+
+  // Ritual spells that are learned (on the sheet) but not prepped still show
+  const props = spell.system.properties;
+  if (props?.has?.("ritual")) return true;
+
+  // If it has a preparation mode or prepared field, it's user-managed — hide if not prepped
+  if (prepMode === "prepared" || spell.system.prepared !== undefined || spell.system.preparation?.prepared !== undefined) {
+    return false;
+  }
   return true;
 }
 

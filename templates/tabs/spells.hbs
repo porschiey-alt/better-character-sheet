@@ -17,6 +17,9 @@
       <span class="bcs-spell-stat-lbl">Save DC</span>
     </div>
     {{/each}}
+    {{#if showManageSpells}}
+    <button type="button" class="bcs-manage-spells-btn" title="Manage Spells"><i class="fas fa-book-open"></i><i class="fas fa-cog bcs-manage-cog"></i></button>
+    {{/if}}
   </div>
   {{/if}}
 
@@ -73,11 +76,14 @@
           </td>
           <td class="col-name">
             <div class="bcs-spell-name-cell">
-              <span class="bcs-spell-name">{{name}}
-                {{#if concentration}}<span class="bcs-spell-icon" title="Concentration">◆</span>{{/if}}
-                {{#if ritual}}<span class="bcs-spell-icon" title="Ritual">ℛ</span>{{/if}}
-              </span>
-              <span class="bcs-spell-source">{{source}}</span>
+              <img src="{{img}}" alt="" class="bcs-spell-icon-img" />
+              <div>
+                <span class="bcs-spell-name">{{name}}
+                  {{#if concentration}}<span class="bcs-spell-icon" title="Concentration">◆</span>{{/if}}
+                  {{#if ritual}}<span class="bcs-spell-icon" title="Ritual">ℛ</span>{{/if}}
+                </span>
+                <span class="bcs-spell-source">{{source}}</span>
+              </div>
             </div>
           </td>
           <td class="col-time">{{castTime}}</td>

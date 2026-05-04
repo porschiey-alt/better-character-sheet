@@ -25,6 +25,7 @@ $radius-sm: 4px;
   // CSS custom properties for theming
   --bcs-accent: #{$gold};
   --bcs-accent-dim: #{$gold-dim};
+  --bcs-accent-text: #000000;
   --bcs-bg-dark: #{$bg-dark};
   --bcs-bg-card: #{$bg-card};
   --bcs-bg-card-alt: #{$bg-card-alt};
@@ -992,6 +993,13 @@ $radius-sm: 4px;
     border-bottom: 1px solid rgba($border-color, 0.5);
   }
 
+  .bcs-action-child {
+    padding-left: 24px;
+    border-bottom: none;
+    border-left: 2px solid var(--bcs-accent-dim);
+    margin-left: 10px;
+  }
+
   .bcs-action-feature-header {
     margin-bottom: 4px;
   }
@@ -1093,8 +1101,10 @@ $radius-sm: 4px;
   .bcs-spell-stats {
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 24px;
     padding: 8px 0 12px;
+    position: relative;
   }
 
   .bcs-spell-stat {
@@ -1214,7 +1224,16 @@ $radius-sm: 4px;
 
   .bcs-spell-name-cell {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .bcs-spell-icon-img {
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    flex-shrink: 0;
   }
 
   .bcs-spell-name {
@@ -1232,6 +1251,303 @@ $radius-sm: 4px;
   .bcs-spell-source {
     font-size: 0.68rem;
     color: $text-muted;
+  }
+
+  // ===== MANAGE SPELLS BUTTON =====
+  .bcs-manage-spells-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    right: 0;
+    width: 36px;
+    height: 36px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid $border-color;
+    border-radius: 6px;
+    color: var(--bcs-accent);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+
+    &:hover { border-color: var(--bcs-accent); background: rgba(255,255,255,0.1); }
+
+    .bcs-manage-cog {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      font-size: 0.5rem;
+      color: $text-muted;
+    }
+  }
+
+  // ===== MANAGE SPELLS PANEL =====
+  .bcs-manage-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 50%;
+    height: 100%;
+    background: var(--bcs-bg-card);
+    border-left: 2px solid $gold-dim;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.2s ease;
+    box-shadow: -4px 0 12px rgba(0,0,0,0.5);
+
+    &[data-panel="open"] { transform: translateX(0); }
+  }
+
+  .bcs-manage-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid $border-color;
+    flex-shrink: 0;
+  }
+
+  .bcs-manage-title {
+    color: var(--bcs-accent);
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+    i { margin-right: 6px; }
+  }
+
+  .bcs-manage-close {
+    background: transparent;
+    border: none;
+    color: $text-muted;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 4px;
+    &:hover { color: $text-primary; }
+  }
+
+  // Wizard add section
+  .bcs-manage-wizard-add {
+    padding: 10px 14px;
+    border-bottom: 1px solid $border-color;
+    flex-shrink: 0;
+  }
+
+  .bcs-manage-search-row {
+    display: flex;
+    gap: 6px;
+  }
+
+  .bcs-manage-search {
+    flex: 1;
+    padding: 6px 10px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid $border-color;
+    border-radius: 4px;
+    color: $text-primary;
+    font-size: 0.8rem;
+    outline: none;
+    &:focus { border-color: var(--bcs-accent); }
+    &::placeholder { color: $text-muted; }
+  }
+
+  .bcs-manage-level-filter {
+    padding: 4px 6px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid $border-color;
+    border-radius: 4px;
+    color: $text-primary;
+    font-size: 0.75rem;
+    outline: none;
+    &:focus { border-color: var(--bcs-accent); }
+    option { background: #1a1d24; }
+  }
+
+  .bcs-manage-search-results {
+    max-height: 180px;
+    overflow-y: auto;
+    margin-top: 6px;
+  }
+
+  .bcs-manage-search-result {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    &:hover { background: rgba(255,255,255,0.05); }
+  }
+
+  .bcs-manage-result-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .bcs-manage-result-level {
+    font-size: 0.65rem;
+    color: $text-muted;
+  }
+
+  .bcs-manage-add-btn {
+    background: transparent;
+    border: 1px solid $border-color;
+    border-radius: 3px;
+    color: $green;
+    padding: 3px 8px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    &:hover { border-color: $green; background: rgba($green, 0.1); }
+  }
+
+  // Spell list body
+  .bcs-manage-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 14px;
+  }
+
+  .bcs-manage-level-group {
+    margin-bottom: 12px;
+  }
+
+  .bcs-manage-level-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--bcs-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid $border-color;
+    padding-bottom: 3px;
+    margin-bottom: 4px;
+  }
+
+  .bcs-manage-spell-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 4px;
+    border-radius: 3px;
+    &:hover { background: rgba(255,255,255,0.04); }
+  }
+
+  .bcs-manage-spell-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .bcs-manage-spell-name {
+    flex: 1;
+    color: $text-primary;
+    font-size: 0.82rem;
+    font-weight: 500;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bcs-manage-prep-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 2px solid $border-color;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    color: transparent;
+    background: transparent;
+    flex-shrink: 0;
+    transition: all 0.15s;
+
+    &.prepared {
+      color: var(--bcs-accent);
+      border-color: var(--bcs-accent);
+      background: rgba($gold, 0.15);
+      &::after { content: "✓"; }
+    }
+    &:hover:not(.disabled) { border-color: var(--bcs-accent-dim); }
+    &.disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+  }
+
+  .bcs-manage-prep-label {
+    font-size: 0.55rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: $text-muted;
+    width: 24px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .bcs-manage-prep-counter {
+    text-align: center;
+    padding: 6px 0 8px;
+    font-size: 0.8rem;
+    color: $text-secondary;
+    border-bottom: 1px solid $border-color;
+    margin-bottom: 8px;
+    strong { color: var(--bcs-accent); }
+  }
+
+  .bcs-manage-remove-btn {
+    background: transparent;
+    border: none;
+    color: $text-muted;
+    padding: 4px 6px;
+    font-size: 0.72rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+    .bcs-manage-spell-row:hover & { opacity: 1; }
+    &:hover { color: $red; }
+  }
+
+  .bcs-manage-learn-bar {
+    padding: 8px 14px;
+    border-bottom: 1px solid $border-color;
+    flex-shrink: 0;
+  }
+
+  .bcs-manage-learn-toggle {
+    width: 100%;
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid $border-color;
+    border-radius: 4px;
+    color: var(--bcs-accent);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    i { margin-right: 4px; }
+    &:hover { border-color: var(--bcs-accent); background: rgba(255,255,255,0.1); }
+  }
+
+  .bcs-manage-owned-badge {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: $text-muted;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border: 1px solid $border-color;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .bcs-manage-search-result.owned {
+    opacity: 0.5;
   }
 
   // ===== INVENTORY TAB =====
@@ -1723,6 +2039,48 @@ $radius-sm: 4px;
     }
   }
 
+  .bcs-feature-subaction {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 3px 0 3px 12px;
+    margin-top: 2px;
+    border-left: 2px solid var(--bcs-accent-dim);
+    cursor: pointer;
+
+    &:hover {
+      border-left-color: var(--bcs-accent);
+      background: rgba(255,255,255,0.03);
+    }
+  }
+
+  .bcs-subaction-badge {
+    font-size: 0.55rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--bcs-accent);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid $border-color;
+    border-radius: 3px;
+    padding: 1px 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .bcs-subaction-name {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: $text-primary;
+  }
+
+  .bcs-subaction-desc {
+    font-size: 0.72rem;
+    color: $text-muted;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   // ===== SLIDE-OUT DETAIL PANEL =====
   .bcs-detail-panel {
     position: absolute;
@@ -1769,6 +2127,114 @@ $radius-sm: 4px;
     padding: 4px;
 
     &:hover { color: $text-primary; }
+  }
+
+  .bcs-detail-actions {
+    padding: 8px 14px;
+    border-bottom: 1px solid $border-color;
+    flex-shrink: 0;
+  }
+
+  .bcs-detail-cast-btn {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bcs-accent);
+    color: var(--bcs-accent-text);
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    i { margin-right: 4px; }
+
+    &:hover { filter: brightness(1.15); }
+  }
+
+  .bcs-detail-spell-meta {
+    padding: 10px 14px;
+    border-bottom: 1px solid $border-color;
+    flex-shrink: 0;
+  }
+
+  .bcs-spell-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+  }
+
+  .bcs-meta-row {
+    display: flex;
+    flex-direction: column;
+    padding: 2px 0;
+  }
+
+  .bcs-meta-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $text-muted;
+  }
+
+  .bcs-meta-value {
+    font-size: 0.8rem;
+    color: $text-primary;
+  }
+
+  .bcs-meta-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid $border-color;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--bcs-accent);
+  }
+
+  .bcs-upcast-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: $text-muted;
+    margin-top: 8px;
+    margin-bottom: 4px;
+  }
+
+  .bcs-upcast-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .bcs-upcast-btn {
+    padding: 4px 10px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid $border-color;
+    border-radius: 3px;
+    color: $text-primary;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+
+    .bcs-upcast-slots {
+      font-weight: 400;
+      color: $text-muted;
+      font-size: 0.68rem;
+    }
+
+    &:hover:not([disabled]) {
+      border-color: var(--bcs-accent);
+      background: rgba(255,255,255,0.1);
+    }
+
+    &[disabled] {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
   }
 
   .bcs-detail-body {
@@ -1893,7 +2359,7 @@ $radius-sm: 4px;
     border: none;
     border-radius: $radius;
     background: var(--bcs-accent);
-    color: $bg-dark;
+    color: var(--bcs-accent-text);
     font-size: 0.85rem;
     font-weight: 700;
     text-transform: uppercase;

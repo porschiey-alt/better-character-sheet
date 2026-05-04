@@ -132,13 +132,13 @@
 
   {{!-- Features across all activation types --}}
   {{#each actionFeatures}}
-  <div class="bcs-action-feature" data-item-id="{{id}}" data-action-type="{{activationType}}" data-limited="{{#if uses}}true{{/if}}">
+  <div class="bcs-action-feature {{#if isChild}}bcs-action-child{{/if}}" data-item-id="{{id}}" {{#if activityId}}data-activity-id="{{activityId}}"{{/if}} data-action-type="{{activationType}}" data-limited="{{#if uses}}true{{/if}}">
     <div class="bcs-action-feature-header">
       <span class="bcs-action-feature-name">{{name}}</span>
       {{#if activationLabel}}<span class="bcs-action-feature-timing">({{activationLabel}})</span>{{/if}}
     </div>
     {{#if truncatedDescription}}
-    <div class="bcs-action-feature-desc-truncated" data-item-id="{{id}}">{{truncatedDescription}}</div>
+    <div class="bcs-action-feature-desc-truncated" data-item-id="{{id}}" {{#if activityId}}data-activity-id="{{activityId}}"{{/if}}>{{truncatedDescription}}</div>
     {{/if}}
     {{#if uses}}
     <div class="bcs-action-feature-uses">

@@ -181,7 +181,42 @@
       <h3 class="bcs-detail-title"></h3>
       <button type="button" class="bcs-detail-close"><i class="fas fa-times"></i></button>
     </div>
+    <div class="bcs-detail-spell-meta" style="display:none;"></div>
+    <div class="bcs-detail-actions" style="display:none;">
+      <button type="button" class="bcs-detail-cast-btn"><i class="fas fa-magic"></i> Cast Spell</button>
+      <div class="bcs-detail-upcast"></div>
+    </div>
     <div class="bcs-detail-body"></div>
+  </div>
+
+  {{!-- Spell Management panel --}}
+  <div class="bcs-manage-panel" data-panel="closed">
+    <div class="bcs-manage-header">
+      <h3 class="bcs-manage-title"><i class="fas fa-book-open"></i> Manage Spells</h3>
+      <button type="button" class="bcs-manage-close"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="bcs-manage-learn-bar" style="display:none;">
+      <button type="button" class="bcs-manage-learn-toggle"><i class="fas fa-scroll"></i> Learn New Spells</button>
+    </div>
+    <div class="bcs-manage-wizard-add" style="display:none;">
+      <div class="bcs-manage-search-row">
+        <input type="text" class="bcs-manage-search" placeholder="Filter spells…" />
+        <select class="bcs-manage-level-filter">
+          <option value="all">All Levels</option>
+          <option value="1">1st</option>
+          <option value="2">2nd</option>
+          <option value="3">3rd</option>
+          <option value="4">4th</option>
+          <option value="5">5th</option>
+          <option value="6">6th</option>
+          <option value="7">7th</option>
+          <option value="8">8th</option>
+          <option value="9">9th</option>
+        </select>
+      </div>
+      <div class="bcs-manage-search-results"></div>
+    </div>
+    <div class="bcs-manage-body"></div>
   </div>
 
   {{!-- Currency editing panel --}}
