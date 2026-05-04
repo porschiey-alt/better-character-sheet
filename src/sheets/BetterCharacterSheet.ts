@@ -1,4 +1,5 @@
 import { getDDBBackdropUrl } from "../helpers/ddb-backdrop.ts";
+import { escapeHtml } from "../helpers/escape-html.ts";
 import {
   buildAbilities,
   buildSaves,
@@ -1119,12 +1120,12 @@ export function createBetterCharacterSheet(): any {
               if (props?.has?.("ritual")) tags.push("Ritual");
 
               let metaHtml = `<div class="bcs-spell-meta-grid">`;
-              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Level</span><span class="bcs-meta-value">${levelLabel}${school ? ` (${school})` : ""}</span></div>`;
-              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Casting Time</span><span class="bcs-meta-value">${castTime}</span></div>`;
-              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Range</span><span class="bcs-meta-value">${range}</span></div>`;
-              if (aoe) metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Area</span><span class="bcs-meta-value">${aoe}</span></div>`;
-              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Duration</span><span class="bcs-meta-value">${duration}</span></div>`;
-              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Components</span><span class="bcs-meta-value">${comps.join(", ") || "None"}${materials ? ` (${materials})` : ""}</span></div>`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Level</span><span class="bcs-meta-value">${escapeHtml(levelLabel)}${school ? ` (${escapeHtml(school)})` : ""}</span></div>`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Casting Time</span><span class="bcs-meta-value">${escapeHtml(castTime)}</span></div>`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Range</span><span class="bcs-meta-value">${escapeHtml(range)}</span></div>`;
+              if (aoe) metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Area</span><span class="bcs-meta-value">${escapeHtml(aoe)}</span></div>`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Duration</span><span class="bcs-meta-value">${escapeHtml(duration)}</span></div>`;
+              metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Components</span><span class="bcs-meta-value">${comps.join(", ") || "None"}${materials ? ` (${escapeHtml(materials)})` : ""}</span></div>`;
               if (tags.length) metaHtml += `<div class="bcs-meta-row"><span class="bcs-meta-label">Tags</span><span class="bcs-meta-value">${tags.map(t => `<span class="bcs-meta-tag">${t}</span>`).join(" ")}</span></div>`;
               metaHtml += `</div>`;
               panelMeta.innerHTML = metaHtml;
@@ -1150,7 +1151,7 @@ export function createBetterCharacterSheet(): any {
                     const available = slotData.value ?? 0;
                     const disabled = available <= 0 ? "disabled" : "";
                     upcastButtons.push(
-                      `<button class="bcs-upcast-btn" data-item-id="${item.id}" data-level="${lvl}" ${disabled}>` +
+                      `<button class="bcs-upcast-btn" data-item-id="${escapeHtml(item.id)}" data-level="${lvl}" ${disabled}>` +
                       `Lv ${lvl} <span class="bcs-upcast-slots">(${available}/${slotData.max})</span></button>`
                     );
                   }
@@ -1358,18 +1359,18 @@ export function createBetterCharacterSheet(): any {
               const alwaysLabel = isCantrip ? "Always" : isAlwaysOn ? "Always" : "";
               const ritual = sp.system.properties?.has?.("ritual");
 
-              html += `<div class="bcs-manage-spell-row" data-item-id="${sp.id}">`;
+              html += `<div class="bcs-manage-spell-row" data-item-id="${escapeHtml(sp.id)}">`;
               if (showToggle) {
-                html += `<span class="bcs-manage-prep-check ${checkedClass} ${disabledClass}" data-item-id="${sp.id}" title="${disabledClass ? "Max prepared reached" : "Toggle prepared"}"></span>`;
+                html += `<span class="bcs-manage-prep-check ${checkedClass} ${disabledClass}" data-item-id="${escapeHtml(sp.id)}" title="${disabledClass ? "Max prepared reached" : "Toggle prepared"}"></span>`;
               } else {
                 html += `<span class="bcs-manage-prep-label">${alwaysLabel}</span>`;
               }
-              html += `<img src="${sp.img || "icons/svg/mystery-man.svg"}" alt="" class="bcs-manage-spell-icon" />`;
-              html += `<span class="bcs-manage-spell-name">${sp.name}`;
+              html += `<img src="${escapeHtml(sp.img || "icons/svg/mystery-man.svg")}" alt="" class="bcs-manage-spell-icon" />`;
+              html += `<span class="bcs-manage-spell-name">${escapeHtml(sp.name)}`;
               if (ritual) html += ` <span class="bcs-spell-icon" title="Ritual">ℛ</span>`;
               html += `</span>`;
               if (isWizardClass && !isCantrip) {
-                html += `<button class="bcs-manage-remove-btn" data-item-id="${sp.id}" title="Remove from spellbook"><i class="fas fa-trash-alt"></i></button>`;
+                html += `<button class="bcs-manage-remove-btn" data-item-id="${escapeHtml(sp.id)}" title="Remove from spellbook"><i class="fas fa-trash-alt"></i></button>`;
               }
               html += `</div>`;
             }
@@ -1512,12 +1513,12 @@ export function createBetterCharacterSheet(): any {
             const owned = ownedNames.has(`${m.name}::${lvl}`);
             const justAdded = pendingAddIds.has(m._id);
             html += `<div class="bcs-manage-search-result ${owned ? "owned" : ""}">`;
-            html += `<img src="${m.img || "icons/svg/mystery-man.svg"}" alt="" class="bcs-manage-spell-icon" />`;
-            html += `<span class="bcs-manage-spell-name">${m.name}</span>`;
+            html += `<img src="${escapeHtml(m.img || "icons/svg/mystery-man.svg")}" alt="" class="bcs-manage-spell-icon" />`;
+            html += `<span class="bcs-manage-spell-name">${escapeHtml(m.name)}</span>`;
             if (owned || justAdded) {
               html += `<span class="bcs-manage-owned-badge">${justAdded ? "Added" : "In Book"}</span>`;
             } else {
-              html += `<button class="bcs-manage-add-btn" data-pack-id="${m._id}" title="Add to spellbook"><i class="fas fa-plus"></i> Add</button>`;
+              html += `<button class="bcs-manage-add-btn" data-pack-id="${escapeHtml(m._id)}" title="Add to spellbook"><i class="fas fa-plus"></i> Add</button>`;
             }
             html += `</div>`;
           }
