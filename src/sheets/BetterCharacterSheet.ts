@@ -2112,7 +2112,7 @@ export function createBetterCharacterSheet(): any {
 
     // Darken a hex color by mixing with near-black
     _darkenColor(hex: string, amount = 0.7): string {
-      if (!hex || !/^#[0-9a-fA-F]{6}$/.test(hex)) return hex || '#000000';
+      if (!hex || !/^#[0-9a-fA-F]{6}$/.test(hex)) return '#000000';
       const r = parseInt(hex.slice(1, 3), 16);
       const g = parseInt(hex.slice(3, 5), 16);
       const b = parseInt(hex.slice(5, 7), 16);
