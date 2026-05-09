@@ -1383,7 +1383,7 @@ export function createBetterCharacterSheet(): any {
       return !!sp.system.preparation?.prepared;
     }
 
-    private _countPreparedWithPending(maxPrep: number): number {
+    private _countPreparedWithPending(): number {
       const actor = this.document;
       return [...actor.items].filter((i: any) => {
         if (i.type !== "spell") return false;
@@ -1413,7 +1413,7 @@ export function createBetterCharacterSheet(): any {
       await actor.createEmbeddedDocuments("Item", docs);
     }
 
-    _flushPendingUses = async () => {
+    private async _flushPendingUses() {
       const actor = this.document;
       if (this._pendingUsesChanges.size === 0) return;
       const updates = [...this._pendingUsesChanges.entries()].map(([id, spent]) => ({
@@ -1421,7 +1421,7 @@ export function createBetterCharacterSheet(): any {
       }));
       this._pendingUsesChanges.clear();
       await actor.updateEmbeddedDocuments("Item", updates);
-    };
+    }
 
     private _populateManagePanel(manageBody: HTMLElement, isWizardClass: boolean, maxPrep: number) {
       const actor = this.document;
@@ -1437,7 +1437,7 @@ export function createBetterCharacterSheet(): any {
         if (!grouped[lvl]) grouped[lvl] = [];
         grouped[lvl].push(sp);
       }
-      const prepCount = this._countPreparedWithPending(maxPrep);
+      const prepCount = this._countPreparedWithPending();
       const atMax = maxPrep > 0 && prepCount >= maxPrep;
 
       let html = `<div class="bcs-manage-prep-counter">Prepared: <strong>${prepCount}</strong> / <strong>${maxPrep}</strong></div>`;
