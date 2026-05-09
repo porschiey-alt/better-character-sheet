@@ -8,7 +8,11 @@
     "watch": "node esbuild.config.mjs --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "powershell -Command \"Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue\""
+    "clean": "powershell -Command \"Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue\"",
+    "skill:capture": "node scripts/skill-capture.mjs",
+    "skill:retrieve": "node scripts/skill-retrieve.mjs",
+    "skill:list": "node scripts/skill-manage.mjs list",
+    "skill:manage": "node scripts/skill-manage.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.27.3",

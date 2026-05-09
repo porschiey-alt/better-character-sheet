@@ -1,0 +1,51 @@
+name: Skill Capture
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [master]
+
+jobs:
+  capture:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Capture skill from merged PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: capture
+        run: |
+          SKILL_FILE=$(node scripts/skill-capture.mjs ${{ github.event.pull_request.number }} 2>/dev/null)
+          if [ -z "$SKILL_FILE" ]; then
+            echo "No skill generated (PR not skill-worthy or not merged)"
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "SKILL_FILE=$SKILL_FILE" >> "$GITHUB_ENV"
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+            echo "Generated: $SKILL_FILE"
+          fi
+
+      - name: Commit skill document
+        if: steps.capture.outputs.generated == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/skills/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: auto-capture skill from PR #${{ github.event.pull_request.number }} [skip ci]"
+            git push
+          fi

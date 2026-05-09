@@ -1,3 +1,26 @@
+---
+id: css-debugging
+problem_category: styling
+source: manual
+affected_files:
+  - src/styles/better-character-sheet.scss
+  - src/sheets/BetterCharacterSheet.ts
+keywords:
+  - CSS
+  - styling
+  - layout
+  - override
+  - visual
+  - debug
+  - window-header
+  - z-index
+  - theming
+effectiveness_score: 80
+read_count: 0
+created_at: 2026-04-01
+last_used_at:
+repository: porschiey-alt/better-character-sheet
+---
 # Skill: CSS Debugging for FoundryVTT
 
 ## When to Use

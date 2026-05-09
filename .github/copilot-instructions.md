@@ -115,3 +115,37 @@ Applied via CSS custom properties in `_onRender`. Background colors are darkened
 - Push a tag: `git tag v0.X.Y && git push origin v0.X.Y`
 - GitHub Actions (`.github/workflows/release.yml`) builds and creates a release
 - Manifest URL for installation: `https://github.com/porschiey-alt/better-character-sheet/releases/latest/download/module.json`
+
+## Skill System
+
+This repository uses an automated skill capture and retrieval system. Skills are structured knowledge documents in `.github/skills/` that capture reusable problem-solving patterns from successful PR merges. See `.github/skills/SCHEMA.md` for the full schema.
+
+### Skill Retrieval (at task start)
+When beginning autonomous work, query relevant skills based on the task context:
+```bash
+node scripts/skill-retrieve.mjs --keywords "<task-keywords>" --files "<affected-files>" --limit 3
+```
+Inject the top 2-3 skills into your working context. This keeps the token budget bounded while providing the most relevant knowledge.
+
+### Skill Capture (after PR merge)
+When shepherding a PR to merge, capture the skill pattern:
+```bash
+node scripts/skill-capture.mjs <pr-number>
+```
+This generates a structured skill document in `.github/skills/auto/`. Commit it as part of the post-merge cleanup. The GitHub Action `.github/workflows/skill-capture.yml` also runs automatically on PR merge as a fallback.
+
+### Feedback Loop
+After a skill-informed approach succeeds or fails:
+```bash
+# Successful PR merge where skill knowledge was used
+node scripts/skill-manage.mjs uprank <skill-id> --amount 10
+
+# Failed/rejected PR where skill was used
+node scripts/skill-manage.mjs downrank <skill-id> --amount 10
+```
+
+### Skill Management
+```bash
+node scripts/skill-manage.mjs list                  # View all skills with metadata
+node scripts/skill-manage.mjs expire --days 90       # Find stale skills
+```

@@ -1,3 +1,23 @@
+---
+id: playwright-testing
+problem_category: testing
+source: manual
+affected_files:
+  - test/*.mjs
+keywords:
+  - playwright
+  - testing
+  - screenshot
+  - visual
+  - browser
+  - automation
+  - debug
+effectiveness_score: 75
+read_count: 0
+created_at: 2026-04-01
+last_used_at:
+repository: porschiey-alt/better-character-sheet
+---
 # Skill: Visual Testing with Playwright
 
 ## When to Use

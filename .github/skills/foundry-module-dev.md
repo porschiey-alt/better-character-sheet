@@ -1,3 +1,27 @@
+---
+id: foundry-module-dev
+problem_category: general
+source: manual
+affected_files:
+  - src/module.ts
+  - src/sheets/BetterCharacterSheet.ts
+  - module.json
+  - templates/**/*.hbs
+keywords:
+  - FoundryVTT
+  - ApplicationV2
+  - dnd5e
+  - sheet
+  - module
+  - activities
+  - rendering
+  - hooks
+effectiveness_score: 90
+read_count: 0
+created_at: 2026-04-01
+last_used_at:
+repository: porschiey-alt/better-character-sheet
+---
 # Skill: FoundryVTT Module Development
 
 ## When to Use
