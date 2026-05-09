@@ -112,16 +112,15 @@ export function createBetterCharacterSheet(): any {
     _pendingAddDocs: any[] = [];
     _pendingAddIds = new Set<string>();
 
-    /** @override — save scroll position before DOM is replaced */
-    async _preRender(context: any, options: any) {
+    // Save scroll position before DOM is replaced
+    override async _preRender(context: any, options: any) {
       await super._preRender(context, options);
       const tabContent = this.element?.querySelector(".bcs-tab-content") as HTMLElement;
       if (tabContent) this._bcsScrollTop = tabContent.scrollTop;
       const manageBody = this.element?.querySelector(".bcs-manage-body") as HTMLElement;
       if (manageBody) this._bcsManageScrollTop = manageBody.scrollTop;
     }
-    /** @override */
-    async _prepareContext(options: any) {
+    override async _prepareContext(options: any) {
       const context = await super._prepareContext(options);
       const system = context.system;
       const actor = context.actor;
@@ -384,8 +383,7 @@ export function createBetterCharacterSheet(): any {
       setTimeout(() => actor.sheet.render(true), 100);
     }
 
-    /** @override */
-    _getHeaderControls() {
+    override _getHeaderControls() {
       const controls = super._getHeaderControls();
       controls.unshift({
         icon: "fas fa-exchange-alt",
@@ -396,14 +394,13 @@ export function createBetterCharacterSheet(): any {
       return controls;
     }
 
-    /** @override — flush pending uses changes before the sheet closes */
-    async _preClose(options: any) {
-      await this._flushPendingUses();
+    // Flush pending uses changes before the sheet closes
+    override async _preClose(options: any) {
+      await this._flushPendingUses?.();
       return super._preClose(options);
     }
 
-    /** @override */
-    async _onRender(context: any, options: any) {
+    override async _onRender(context: any, options: any) {
       // Skip dnd5e's _onRender (it expects DOM elements from its own templates).
       // Go directly to the Foundry framework's base _onRender.
       const baseProto =
