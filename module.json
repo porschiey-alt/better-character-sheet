@@ -2,7 +2,33 @@
   "id": "better-character-sheet",
   "title": "Better Character Sheet",
   "description": "A DnDBeyond-inspired character sheet replacement for the D&amp;D 5th Edition system in FoundryVTT.",
-  "version": "0.2.0",
+  "version": "0.3.0",
+  "license": "MIT",
+  "readme": "https://github.com/porschiey-alt/better-character-sheet/blob/master/README.md",
+  "bugs": "https://github.com/porschiey-alt/better-character-sheet/issues",
+  "changelog": "https://github.com/porschiey-alt/better-character-sheet/releases",
+  "media": [
+    {
+      "type": "cover",
+      "url": "https://raw.githubusercontent.com/porschiey-alt/better-character-sheet/master/docs/exampleCleric.png",
+      "caption": "Better Character Sheet — DnDBeyond-inspired dark theme"
+    },
+    {
+      "type": "screenshot",
+      "url": "https://raw.githubusercontent.com/porschiey-alt/better-character-sheet/master/docs/exampleDruidSpells.png",
+      "caption": "Spell management with prepared spell tracking"
+    },
+    {
+      "type": "screenshot",
+      "url": "https://raw.githubusercontent.com/porschiey-alt/better-character-sheet/master/docs/customTheme.png",
+      "caption": "Per-character custom accent color theming"
+    },
+    {
+      "type": "screenshot",
+      "url": "https://raw.githubusercontent.com/porschiey-alt/better-character-sheet/master/docs/featureFullExplanation.png",
+      "caption": "Feature details and limited use tracking"
+    }
+  ],
   "compatibility": {
     "minimum": "14",
     "verified": "14"
@@ -10,6 +36,7 @@
   "authors": [
     {
       "name": "porschiey-alt",
+      "url": "https://github.com/porschiey-alt",
       "flags": {}
     }
   ],
@@ -22,6 +49,12 @@
           "minimum": "5.0.0",
           "verified": "5.3.2"
         }
+      }
+    ],
+    "recommends": [
+      {
+        "id": "ddb-importer",
+        "type": "module"
       }
     ]
   },
