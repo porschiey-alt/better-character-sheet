@@ -340,9 +340,22 @@ describe("buildInventoryGroups", () => {
     expect(loot.items[0].notes).toBe("5/7 charges");
   });
 
+  it("includes tool-type items in a Tools group", () => {
+    const items = [
+      { id: "1", name: "Thieves' Tools", img: "", type: "tool", system: { type: {}, price: { value: 25, denomination: "gp" }, quantity: 1, weight: { value: 1 }, equipped: true, attunement: "" } },
+      { id: "2", name: "Herbalism Kit", img: "", type: "tool", system: { type: {}, price: { value: 5, denomination: "gp" }, quantity: 1, weight: { value: 3 }, equipped: false, attunement: "" } },
+    ];
+    const groups = buildInventoryGroups(items);
+    const toolGroup = groups.find((g) => g.type === "tool")!;
+    expect(toolGroup.label).toBe("Tools");
+    expect(toolGroup.items).toHaveLength(2);
+    expect(toolGroup.items[0].name).toBe("Thieves' Tools");
+    expect(toolGroup.items[1].name).toBe("Herbalism Kit");
+  });
+
   it("returns empty groups for missing types", () => {
     const groups = buildInventoryGroups([]);
-    expect(groups).toHaveLength(5);
+    expect(groups).toHaveLength(6);
     expect(groups.every((g) => g.items.length === 0)).toBe(true);
   });
 });

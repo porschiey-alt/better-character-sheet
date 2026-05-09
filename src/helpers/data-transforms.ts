@@ -213,11 +213,12 @@ export function buildSpellSlots(systemSpells: Record<string, any>): SpellSlotVM[
  * Filters out natural weapons (e.g. Unarmed Strike).
  */
 export function buildInventoryGroups(items: any[]): InventoryGroupVM[] {
-  const invTypes = ["weapon", "equipment", "consumable", "container", "loot"];
+  const invTypes = ["weapon", "equipment", "consumable", "tool", "container", "loot"];
   const invLabels: Record<string, string> = {
     weapon: "Weapons",
     equipment: "Equipment",
     consumable: "Consumables",
+    tool: "Tools",
     container: "Containers",
     loot: "Loot",
   };
