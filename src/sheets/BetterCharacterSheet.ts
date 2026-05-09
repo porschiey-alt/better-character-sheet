@@ -75,6 +75,12 @@ export function createBetterCharacterSheet(): any {
     _bcsLearnPanelOpen = false;
     _bcsManageScrollTop = 0;
 
+    // Pending state maps — cleared each render, flushed on tab/panel change or close
+    _pendingUsesChanges = new Map<string, number>();
+    _pendingPrep = new Map<string, boolean>();
+    _pendingAddDocs: any[] = [];
+    _pendingAddIds = new Set<string>();
+
     /** @override — save scroll position before DOM is replaced */
     async _preRender(context: any, options: any) {
       await super._preRender(context, options);
@@ -764,7 +770,7 @@ export function createBetterCharacterSheet(): any {
 
     /** @override — flush pending uses changes before the sheet closes */
     async _preClose(options: any) {
-      await this._flushPendingUses?.();
+      await this._flushPendingUses();
       return super._preClose(options);
     }
 
@@ -776,6 +782,43 @@ export function createBetterCharacterSheet(): any {
         foundry.applications.api.ApplicationV2.prototype as any;
       await baseProto._onRender.call(this, context, options);
 
+      // Clear pending state maps (re-populated each render cycle)
+      this._pendingUsesChanges.clear();
+      this._pendingPrep.clear();
+      this._pendingAddDocs.length = 0;
+      this._pendingAddIds.clear();
+
+      this._setupEditMode();
+      this._setupBackdrop(context);
+      this._setupTabs();
+      this._setupFilters();
+      this._setupRolls();
+      this._setupDeathSaves();
+      this._setupAttacks();
+      this._setupSpellDetailPanel();
+      this._setupInspiration();
+      this._setupSpellSlotPips();
+      this._setupManageSpells();
+      this._setupFeaturePips();
+      this._setupCombatActions();
+      this._setupActionFeatures();
+      this._setupItemSheets();
+      this._setupEquipAttune();
+      this._setupCurrencyPanel();
+      this._setupACPanel();
+      this._setupHPPanel();
+      this._setupConditionsPanel();
+      this._setupTheme();
+      this._setupDetailPanel();
+      this._emitCompatHook(context);
+      this._restoreScroll();
+    }
+
+    // ========================================
+    // SETUP SUB-METHODS (extracted from _onRender)
+    // ========================================
+
+    private _setupEditMode() {
       // Restore edit mode toggle and CSS classes that the skipped parent chain provides
       this._renderModeToggle();
       this.element.classList.toggle(
@@ -793,8 +836,9 @@ export function createBetterCharacterSheet(): any {
         resizeHandle.style.width = "18px";
         resizeHandle.style.height = "18px";
       }
+    }
 
-      // Apply DnD Beyond backdrop image to the header
+    private _setupBackdrop(context: any) {
       if (context.backdropUrl) {
         const header = this.element.querySelector(".bcs-header") as HTMLElement | null;
         if (header) {
@@ -806,7 +850,9 @@ export function createBetterCharacterSheet(): any {
           header.classList.add("bcs-has-backdrop");
         }
       }
+    }
 
+    private _setupTabs() {
       // Restore active tab from instance state
       const savedTab = this._bcsActiveTab || "actions";
       this.element
@@ -842,8 +888,9 @@ export function createBetterCharacterSheet(): any {
               ?.classList.add("active");
           });
         });
+    }
 
-      // Action filter pills
+    private _setupFilters() {
       this.element
         .querySelectorAll(".bcs-filter-pill")
         .forEach((btn: Element) => {
@@ -937,12 +984,12 @@ export function createBetterCharacterSheet(): any {
             }
           });
         });
-      // ========================================
-      // PHASE 5: INTERACTIVITY
-      // ========================================
+    }
+
+    private _setupRolls() {
       const actor = this.document;
 
-      // 1. Ability checks — click ability score block
+      // Ability checks — click ability score block
       this.element
         .querySelectorAll(".bcs-ability[data-ability]")
         .forEach((el: Element) => {
@@ -952,7 +999,7 @@ export function createBetterCharacterSheet(): any {
           });
         });
 
-      // 2. Saving throws — click save row
+      // Saving throws — click save row
       this.element
         .querySelectorAll(".bcs-save-item[data-ability]")
         .forEach((el: Element) => {
@@ -962,7 +1009,7 @@ export function createBetterCharacterSheet(): any {
           });
         });
 
-      // 3. Skill checks — click skill row
+      // Skill checks — click skill row
       this.element
         .querySelectorAll(".bcs-skill-item[data-skill]")
         .forEach((el: Element) => {
@@ -972,7 +1019,7 @@ export function createBetterCharacterSheet(): any {
           });
         });
 
-      // 4. Initiative — click initiative stat block
+      // Initiative — click initiative stat block
       this.element
         .querySelectorAll(".bcs-combat-init")
         .forEach((el: Element) => {
@@ -981,8 +1028,12 @@ export function createBetterCharacterSheet(): any {
           });
           (el as HTMLElement).style.cursor = "pointer";
         });
+    }
 
-      // 5. Death saves — click individual pips to toggle values
+    private _setupDeathSaves() {
+      const actor = this.document;
+
+      // Death saves — click individual pips to toggle values
       this.element
         .querySelectorAll(".bcs-ds-pip[data-ds-type]")
         .forEach((el: Element) => {
@@ -1024,8 +1075,12 @@ export function createBetterCharacterSheet(): any {
             await actor.update({ "system.attributes.death.success": 0, "system.attributes.death.failure": 0 });
           });
         });
+    }
 
-      // 6. Attack rolls — click attack row to use the item
+    private _setupAttacks() {
+      const actor = this.document;
+
+      // Attack rolls — click attack row to use the item
       this.element
         .querySelectorAll(
           ".bcs-attack-row[data-item-id]"
@@ -1044,8 +1099,12 @@ export function createBetterCharacterSheet(): any {
           });
           (el as HTMLElement).style.cursor = "pointer";
         });
+    }
 
-      // 7. Spell rows — click to open detail panel with description + cast button
+    private _setupSpellDetailPanel() {
+      const actor = this.document;
+
+      // Spell rows — click to open detail panel with description + cast button
       this.element
         .querySelectorAll(".bcs-spell-row[data-item-id]")
         .forEach((el: Element) => {
@@ -1184,11 +1243,11 @@ export function createBetterCharacterSheet(): any {
           });
           (el as HTMLElement).style.cursor = "pointer";
         });
+    }
 
-      // 8 & 9. Heal/Damage — handled by static actions (#onHeal, #onDamage)
-      // via data-action="heal" / data-action="damage" on the template buttons.
+    private _setupInspiration() {
+      const actor = this.document;
 
-      // 11. Inspiration toggle
       this.element
         .querySelectorAll(".bcs-inspiration")
         .forEach((el: Element) => {
@@ -1199,8 +1258,11 @@ export function createBetterCharacterSheet(): any {
             });
           });
         });
+    }
 
-      // 12. Spell slot pips — click to toggle used/available
+    private _setupSpellSlotPips() {
+      const actor = this.document;
+
       this.element
         .querySelectorAll(".bcs-slot-pip")
         .forEach((el: Element) => {
@@ -1226,8 +1288,11 @@ export function createBetterCharacterSheet(): any {
             });
           });
         });
+    }
 
-      // Manage Spells panel
+    private _setupManageSpells() {
+      const actor = this.document;
+
       const managePanel = this.element.querySelector(".bcs-manage-panel") as HTMLElement;
       const manageBody = this.element.querySelector(".bcs-manage-body") as HTMLElement;
       const manageClose = this.element.querySelector(".bcs-manage-close");
@@ -1239,8 +1304,6 @@ export function createBetterCharacterSheet(): any {
       const learnToggleBtn = this.element.querySelector(".bcs-manage-learn-toggle") as HTMLElement;
 
       if (managePanel && manageBody) {
-        const lvlLabels = LEVEL_LABELS;
-
         // Detect caster type from context
         const prepCasterIds = new Set(["wizard", "cleric", "druid", "paladin"]);
         const castingClass = actor.items?.find((i: any) => {
@@ -1262,154 +1325,9 @@ export function createBetterCharacterSheet(): any {
           }
         }
 
-        // Count prepared spells that count against the max.
-        // Uses preparation.mode to distinguish user-prepared from always-on.
-        // Excludes cantrips and always-on spells.
-        const countPrepared = () => {
-          return [...actor.items].filter((i: any) => {
-            if (i.type !== "spell") return false;
-            if ((i.system.level ?? 0) === 0) return false;
-            const mode = i.system.preparation?.mode;
-            if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return false;
-            return !!i.system.preparation?.prepared;
-          }).length;
-        };
-
-        // Pending prep changes — toggled locally, flushed on panel close
-        const pendingPrep = new Map<string, boolean>();
-
-        // Get effective prepared state (pending override or actual)
-        const isEffectivelyPrepared = (sp: any) => {
-          if (pendingPrep.has(sp.id)) return pendingPrep.get(sp.id);
-          return !!sp.system.preparation?.prepared;
-        };
-
-        // Count prepared including pending changes
-        const countPreparedWithPending = () => {
-          return [...actor.items].filter((i: any) => {
-            if (i.type !== "spell") return false;
-            if ((i.system.level ?? 0) === 0) return false;
-            const mode = i.system.preparation?.mode;
-            if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return false;
-            return isEffectivelyPrepared(i);
-          }).length;
-        };
-
-        // Flush all pending prep changes to Foundry
-        const flushPendingPrep = async () => {
-          if (pendingPrep.size === 0) return;
-          const updates = [...pendingPrep.entries()].map(([id, prepared]) => ({
-            _id: id, "system.preparation.prepared": prepared,
-          }));
-          pendingPrep.clear();
-          await actor.updateEmbeddedDocuments("Item", updates);
-        };
-
-        // Pending spell additions (wizard) — flushed on panel close
-        const pendingAddDocs: any[] = [];
-        const pendingAddIds = new Set<string>();
-
-        const flushPendingAdds = async () => {
-          if (pendingAddDocs.length === 0) return;
-          const docs = [...pendingAddDocs];
-          pendingAddDocs.length = 0;
-          pendingAddIds.clear();
-          await actor.createEmbeddedDocuments("Item", docs);
-        };
-
-        // Build the manage panel spell list
-        const populateManagePanel = () => {
-          // Save scroll position before repopulating
-          const scrollTop = manageBody.scrollTop;
-
-          const allSpells = [...actor.items].filter((i: any) => i.type === "spell");
-          const grouped: Record<number, any[]> = {};
-          for (const sp of allSpells) {
-            const lvl = sp.system.level ?? 0;
-            if (!grouped[lvl]) grouped[lvl] = [];
-            grouped[lvl].push(sp);
-          }
-          const prepCount = countPreparedWithPending();
-          const atMax = maxPrep > 0 && prepCount >= maxPrep;
-
-          let html = `<div class="bcs-manage-prep-counter">Prepared: <strong>${prepCount}</strong> / <strong>${maxPrep}</strong></div>`;
-          const sortedLevels = Object.keys(grouped).map(Number).sort((a, b) => a - b);
-          for (const lvl of sortedLevels) {
-            const spells = grouped[lvl].sort((a: any, b: any) => a.name.localeCompare(b.name));
-            html += `<div class="bcs-manage-level-group">`;
-            html += `<div class="bcs-manage-level-label">${lvlLabels[lvl] || `Level ${lvl}`}</div>`;
-            for (const sp of spells) {
-              const isCantrip = lvl === 0;
-              const prepMode = sp.system.preparation?.mode;
-              const isAlwaysOn = prepMode === "always" || prepMode === "innate" || prepMode === "atwill" || prepMode === "pact";
-              const isPrepared = isEffectivelyPrepared(sp);
-              const showToggle = !isCantrip && !isAlwaysOn;
-              const checkedClass = isPrepared ? "prepared" : "";
-              const disabledClass = !isPrepared && atMax && showToggle ? "disabled" : "";
-              const alwaysLabel = isCantrip ? "Always" : isAlwaysOn ? "Always" : "";
-              const ritual = sp.system.properties?.has?.("ritual");
-
-              html += `<div class="bcs-manage-spell-row" data-item-id="${escapeHtml(sp.id)}">`;
-              if (showToggle) {
-                html += `<span class="bcs-manage-prep-check ${checkedClass} ${disabledClass}" data-item-id="${escapeHtml(sp.id)}" title="${disabledClass ? "Max prepared reached" : "Toggle prepared"}"></span>`;
-              } else {
-                html += `<span class="bcs-manage-prep-label">${alwaysLabel}</span>`;
-              }
-              html += `<img src="${escapeHtml(sp.img || "icons/svg/mystery-man.svg")}" alt="" class="bcs-manage-spell-icon" />`;
-              html += `<span class="bcs-manage-spell-name">${escapeHtml(sp.name)}`;
-              if (ritual) html += ` <span class="bcs-spell-icon" title="Ritual">ℛ</span>`;
-              html += `</span>`;
-              if (isWizardClass && !isCantrip) {
-                html += `<button class="bcs-manage-remove-btn" data-item-id="${escapeHtml(sp.id)}" title="Remove from spellbook"><i class="fas fa-trash-alt"></i></button>`;
-              }
-              html += `</div>`;
-            }
-            html += `</div>`;
-          }
-          if (!sortedLevels.length) {
-            html += `<div class="bcs-empty-state">No spells on this character</div>`;
-          }
-          manageBody.innerHTML = html;
-          manageBody.scrollTop = scrollTop;
-
-          // Bind prep toggles — local toggle, no server update
-          manageBody.querySelectorAll(".bcs-manage-prep-check:not(.disabled)").forEach((el: Element) => {
-            el.addEventListener("click", (e: Event) => {
-              e.stopPropagation();
-              const itemId = (el as HTMLElement).dataset.itemId;
-              if (!itemId) return;
-              const sp = actor.items.get(itemId);
-              if (!sp) return;
-              const currentlyPrepped = isEffectivelyPrepared(sp);
-              pendingPrep.set(itemId, !currentlyPrepped);
-              populateManagePanel();
-            });
-            (el as HTMLElement).style.cursor = "pointer";
-          });
-
-          // Bind remove buttons (wizard only)
-          manageBody.querySelectorAll(".bcs-manage-remove-btn").forEach((el: Element) => {
-            el.addEventListener("click", async (e: Event) => {
-              e.stopPropagation();
-              const itemId = (el as HTMLElement).dataset.itemId;
-              if (!itemId) return;
-              const item = actor.items.get(itemId);
-              if (!item) return;
-              const confirmed = await Dialog.confirm({
-                title: "Remove Spell",
-                content: `<p>Remove <strong>${item.name}</strong> from your spellbook?</p>`,
-              });
-              if (confirmed) {
-                await item.delete();
-                populateManagePanel();
-              }
-            });
-          });
-        };
-
         // Restore panel state after re-render
         if (this._bcsManagePanelOpen) {
-          populateManagePanel();
+          this._populateManagePanel(manageBody, isWizardClass, maxPrep);
           managePanel.dataset.panel = "open";
           if (isWizardClass && learnBar) learnBar.style.display = "";
           if (this._bcsLearnPanelOpen && learnSection) learnSection.style.display = "";
@@ -1419,7 +1337,7 @@ export function createBetterCharacterSheet(): any {
 
         // Open panel
         this.element.querySelector(".bcs-manage-spells-btn")?.addEventListener("click", () => {
-          populateManagePanel();
+          this._populateManagePanel(manageBody, isWizardClass, maxPrep);
           if (isWizardClass && learnBar) learnBar.style.display = "";
           this._bcsManagePanelOpen = true;
           managePanel.dataset.panel = "open";
@@ -1433,8 +1351,8 @@ export function createBetterCharacterSheet(): any {
           if (learnSection) learnSection.style.display = "none";
           if (learnBar) learnBar.style.display = "none";
           if (learnResults) learnResults.innerHTML = "";
-          await flushPendingAdds();
-          await flushPendingPrep();
+          await this._flushPendingAdds();
+          await this._flushPendingPrep();
         });
 
         // Wizard: "Learn New Spells" toggle
@@ -1444,107 +1362,249 @@ export function createBetterCharacterSheet(): any {
             const isOpen = learnSection.style.display !== "none";
             learnSection.style.display = isOpen ? "none" : "";
             this._bcsLearnPanelOpen = !isOpen;
-            if (!isOpen) populateLearnList();
+            if (!isOpen) this._populateLearnList(learnResults, learnSearch, learnLevelFilter);
           });
         }
 
-        // Wizard: learn spells list + search/filter
-        const populateLearnList = async () => {
-          if (!learnResults) return;
-          const learnScrollTop = learnResults.scrollTop;
-          const pack = (game as any).packs?.get("dnd5e.spells");
-          if (!pack) {
-            learnResults.innerHTML = `<div class="bcs-empty-state">Spell compendium not found</div>`;
-            return;
-          }
-          // Determine highest spell slot level the actor can cast
-          const slots = actor.system.spells || {};
-          let maxSlotLevel = 0;
-          for (let i = 1; i <= 9; i++) {
-            if (slots[`spell${i}`]?.max > 0) maxSlotLevel = i;
-          }
-
-          const index = await pack.getIndex({ fields: ["system.level", "system.school"] });
-          const ownedNames = new Set(
-            [...actor.items].filter((i: any) => i.type === "spell").map((i: any) => `${i.name}::${i.system.level ?? 0}`)
-          );
-          // Also count pending adds as owned
-          for (const doc of pendingAddDocs) {
-            ownedNames.add(`${doc.name}::${doc.system?.level ?? 0}`);
-          }
-          const query = learnSearch?.value?.trim().toLowerCase() || "";
-          const levelVal = learnLevelFilter?.value || "all";
-
-          const matches = [...index].filter((entry: any) => {
-            const lvl = entry.system?.level ?? 0;
-            if (lvl === 0) return false;
-            if (maxSlotLevel > 0 && lvl > maxSlotLevel) return false;
-            if (levelVal !== "all" && lvl !== Number(levelVal)) return false;
-            if (query && !entry.name.toLowerCase().includes(query)) return false;
-            return true;
-          }).sort((a: any, b: any) => {
-            const lvlDiff = (a.system?.level ?? 0) - (b.system?.level ?? 0);
-            return lvlDiff !== 0 ? lvlDiff : a.name.localeCompare(b.name);
-          }).slice(0, 50);
-
-          if (!matches.length) {
-            learnResults.innerHTML = `<div class="bcs-empty-state">No matching spells found</div>`;
-            return;
-          }
-
-          let html = "";
-          let currentLvl = -1;
-          for (const m of matches) {
-            const lvl = m.system?.level ?? 0;
-            if (lvl !== currentLvl) {
-              currentLvl = lvl;
-              html += `<div class="bcs-manage-level-label" style="margin-top:8px;">${lvlLabels[lvl] || `Level ${lvl}`}</div>`;
-            }
-            const owned = ownedNames.has(`${m.name}::${lvl}`);
-            const justAdded = pendingAddIds.has(m._id);
-            html += `<div class="bcs-manage-search-result ${owned ? "owned" : ""}">`;
-            html += `<img src="${escapeHtml(m.img || "icons/svg/mystery-man.svg")}" alt="" class="bcs-manage-spell-icon" />`;
-            html += `<span class="bcs-manage-spell-name">${escapeHtml(m.name)}</span>`;
-            if (owned || justAdded) {
-              html += `<span class="bcs-manage-owned-badge">${justAdded ? "Added" : "In Book"}</span>`;
-            } else {
-              html += `<button class="bcs-manage-add-btn" data-pack-id="${escapeHtml(m._id)}" title="Add to spellbook"><i class="fas fa-plus"></i> Add</button>`;
-            }
-            html += `</div>`;
-          }
-          learnResults.innerHTML = html;
-          learnResults.scrollTop = learnScrollTop;
-
-          // Bind add buttons — local queue, no server call
-          learnResults.querySelectorAll(".bcs-manage-add-btn").forEach((el: Element) => {
-            el.addEventListener("click", async (e: Event) => {
-              e.stopPropagation();
-              const packId = (el as HTMLElement).dataset.packId;
-              if (!packId || pendingAddIds.has(packId)) return;
-              const doc = await pack.getDocument(packId);
-              if (!doc) return;
-              const data = doc.toObject();
-              data.system.preparation = { mode: "prepared", prepared: false };
-              pendingAddDocs.push(data);
-              pendingAddIds.add(packId);
-              populateLearnList();
-            });
-          });
-        };
-
+        // Wizard: learn spells list search/filter
         if (isWizardClass && learnSearch && learnResults) {
           let searchTimeout: any = null;
           learnSearch.addEventListener("input", () => {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(populateLearnList, 300);
+            searchTimeout = setTimeout(() => this._populateLearnList(learnResults, learnSearch, learnLevelFilter), 300);
           });
-          learnLevelFilter?.addEventListener("change", () => populateLearnList());
+          learnLevelFilter?.addEventListener("change", () => this._populateLearnList(learnResults, learnSearch, learnLevelFilter));
         }
       }
+    }
 
-      // 13. Feature use pips — click to toggle, update DOM in-place
-      const pendingUsesChanges = new Map<string, number>();
+    private _isEffectivelyPrepared(sp: any): boolean {
+      if (this._pendingPrep.has(sp.id)) return this._pendingPrep.get(sp.id)!;
+      return !!sp.system.preparation?.prepared;
+    }
 
+    private _countPreparedWithPending(maxPrep: number): number {
+      const actor = this.document;
+      return [...actor.items].filter((i: any) => {
+        if (i.type !== "spell") return false;
+        if ((i.system.level ?? 0) === 0) return false;
+        const mode = i.system.preparation?.mode;
+        if (mode === "always" || mode === "innate" || mode === "atwill" || mode === "pact") return false;
+        return this._isEffectivelyPrepared(i);
+      }).length;
+    }
+
+    private async _flushPendingPrep() {
+      const actor = this.document;
+      if (this._pendingPrep.size === 0) return;
+      const updates = [...this._pendingPrep.entries()].map(([id, prepared]) => ({
+        _id: id, "system.preparation.prepared": prepared,
+      }));
+      this._pendingPrep.clear();
+      await actor.updateEmbeddedDocuments("Item", updates);
+    }
+
+    private async _flushPendingAdds() {
+      const actor = this.document;
+      if (this._pendingAddDocs.length === 0) return;
+      const docs = [...this._pendingAddDocs];
+      this._pendingAddDocs.length = 0;
+      this._pendingAddIds.clear();
+      await actor.createEmbeddedDocuments("Item", docs);
+    }
+
+    _flushPendingUses = async () => {
+      const actor = this.document;
+      if (this._pendingUsesChanges.size === 0) return;
+      const updates = [...this._pendingUsesChanges.entries()].map(([id, spent]) => ({
+        _id: id, "system.uses.spent": spent,
+      }));
+      this._pendingUsesChanges.clear();
+      await actor.updateEmbeddedDocuments("Item", updates);
+    };
+
+    private _populateManagePanel(manageBody: HTMLElement, isWizardClass: boolean, maxPrep: number) {
+      const actor = this.document;
+      const lvlLabels = LEVEL_LABELS;
+
+      // Save scroll position before repopulating
+      const scrollTop = manageBody.scrollTop;
+
+      const allSpells = [...actor.items].filter((i: any) => i.type === "spell");
+      const grouped: Record<number, any[]> = {};
+      for (const sp of allSpells) {
+        const lvl = sp.system.level ?? 0;
+        if (!grouped[lvl]) grouped[lvl] = [];
+        grouped[lvl].push(sp);
+      }
+      const prepCount = this._countPreparedWithPending(maxPrep);
+      const atMax = maxPrep > 0 && prepCount >= maxPrep;
+
+      let html = `<div class="bcs-manage-prep-counter">Prepared: <strong>${prepCount}</strong> / <strong>${maxPrep}</strong></div>`;
+      const sortedLevels = Object.keys(grouped).map(Number).sort((a, b) => a - b);
+      for (const lvl of sortedLevels) {
+        const spells = grouped[lvl].sort((a: any, b: any) => a.name.localeCompare(b.name));
+        html += `<div class="bcs-manage-level-group">`;
+        html += `<div class="bcs-manage-level-label">${lvlLabels[lvl] || `Level ${lvl}`}</div>`;
+        for (const sp of spells) {
+          const isCantrip = lvl === 0;
+          const prepMode = sp.system.preparation?.mode;
+          const isAlwaysOn = prepMode === "always" || prepMode === "innate" || prepMode === "atwill" || prepMode === "pact";
+          const isPrepared = this._isEffectivelyPrepared(sp);
+          const showToggle = !isCantrip && !isAlwaysOn;
+          const checkedClass = isPrepared ? "prepared" : "";
+          const disabledClass = !isPrepared && atMax && showToggle ? "disabled" : "";
+          const alwaysLabel = isCantrip ? "Always" : isAlwaysOn ? "Always" : "";
+          const ritual = sp.system.properties?.has?.("ritual");
+
+          html += `<div class="bcs-manage-spell-row" data-item-id="${escapeHtml(sp.id)}">`;
+          if (showToggle) {
+            html += `<span class="bcs-manage-prep-check ${checkedClass} ${disabledClass}" data-item-id="${escapeHtml(sp.id)}" title="${disabledClass ? "Max prepared reached" : "Toggle prepared"}"></span>`;
+          } else {
+            html += `<span class="bcs-manage-prep-label">${alwaysLabel}</span>`;
+          }
+          html += `<img src="${escapeHtml(sp.img || "icons/svg/mystery-man.svg")}" alt="" class="bcs-manage-spell-icon" />`;
+          html += `<span class="bcs-manage-spell-name">${escapeHtml(sp.name)}`;
+          if (ritual) html += ` <span class="bcs-spell-icon" title="Ritual">ℛ</span>`;
+          html += `</span>`;
+          if (isWizardClass && !isCantrip) {
+            html += `<button class="bcs-manage-remove-btn" data-item-id="${escapeHtml(sp.id)}" title="Remove from spellbook"><i class="fas fa-trash-alt"></i></button>`;
+          }
+          html += `</div>`;
+        }
+        html += `</div>`;
+      }
+      if (!sortedLevels.length) {
+        html += `<div class="bcs-empty-state">No spells on this character</div>`;
+      }
+      manageBody.innerHTML = html;
+      manageBody.scrollTop = scrollTop;
+
+      // Bind prep toggles — local toggle, no server update
+      manageBody.querySelectorAll(".bcs-manage-prep-check:not(.disabled)").forEach((el: Element) => {
+        el.addEventListener("click", (e: Event) => {
+          e.stopPropagation();
+          const itemId = (el as HTMLElement).dataset.itemId;
+          if (!itemId) return;
+          const sp = actor.items.get(itemId);
+          if (!sp) return;
+          const currentlyPrepped = this._isEffectivelyPrepared(sp);
+          this._pendingPrep.set(itemId, !currentlyPrepped);
+          this._populateManagePanel(manageBody, isWizardClass, maxPrep);
+        });
+        (el as HTMLElement).style.cursor = "pointer";
+      });
+
+      // Bind remove buttons (wizard only)
+      manageBody.querySelectorAll(".bcs-manage-remove-btn").forEach((el: Element) => {
+        el.addEventListener("click", async (e: Event) => {
+          e.stopPropagation();
+          const itemId = (el as HTMLElement).dataset.itemId;
+          if (!itemId) return;
+          const item = actor.items.get(itemId);
+          if (!item) return;
+          const confirmed = await Dialog.confirm({
+            title: "Remove Spell",
+            content: `<p>Remove <strong>${item.name}</strong> from your spellbook?</p>`,
+          });
+          if (confirmed) {
+            await item.delete();
+            this._populateManagePanel(manageBody, isWizardClass, maxPrep);
+          }
+        });
+      });
+    }
+
+    private async _populateLearnList(learnResults: HTMLElement | null, learnSearch: HTMLInputElement | null, learnLevelFilter: HTMLSelectElement | null) {
+      const actor = this.document;
+      const lvlLabels = LEVEL_LABELS;
+
+      if (!learnResults) return;
+      const learnScrollTop = learnResults.scrollTop;
+      const pack = (game as any).packs?.get("dnd5e.spells");
+      if (!pack) {
+        learnResults.innerHTML = `<div class="bcs-empty-state">Spell compendium not found</div>`;
+        return;
+      }
+      // Determine highest spell slot level the actor can cast
+      const slots = actor.system.spells || {};
+      let maxSlotLevel = 0;
+      for (let i = 1; i <= 9; i++) {
+        if (slots[`spell${i}`]?.max > 0) maxSlotLevel = i;
+      }
+
+      const index = await pack.getIndex({ fields: ["system.level", "system.school"] });
+      const ownedNames = new Set(
+        [...actor.items].filter((i: any) => i.type === "spell").map((i: any) => `${i.name}::${i.system.level ?? 0}`)
+      );
+      // Also count pending adds as owned
+      for (const doc of this._pendingAddDocs) {
+        ownedNames.add(`${doc.name}::${doc.system?.level ?? 0}`);
+      }
+      const query = learnSearch?.value?.trim().toLowerCase() || "";
+      const levelVal = learnLevelFilter?.value || "all";
+
+      const matches = [...index].filter((entry: any) => {
+        const lvl = entry.system?.level ?? 0;
+        if (lvl === 0) return false;
+        if (maxSlotLevel > 0 && lvl > maxSlotLevel) return false;
+        if (levelVal !== "all" && lvl !== Number(levelVal)) return false;
+        if (query && !entry.name.toLowerCase().includes(query)) return false;
+        return true;
+      }).sort((a: any, b: any) => {
+        const lvlDiff = (a.system?.level ?? 0) - (b.system?.level ?? 0);
+        return lvlDiff !== 0 ? lvlDiff : a.name.localeCompare(b.name);
+      }).slice(0, 50);
+
+      if (!matches.length) {
+        learnResults.innerHTML = `<div class="bcs-empty-state">No matching spells found</div>`;
+        return;
+      }
+
+      let html = "";
+      let currentLvl = -1;
+      for (const m of matches) {
+        const lvl = m.system?.level ?? 0;
+        if (lvl !== currentLvl) {
+          currentLvl = lvl;
+          html += `<div class="bcs-manage-level-label" style="margin-top:8px;">${lvlLabels[lvl] || `Level ${lvl}`}</div>`;
+        }
+        const owned = ownedNames.has(`${m.name}::${lvl}`);
+        const justAdded = this._pendingAddIds.has(m._id);
+        html += `<div class="bcs-manage-search-result ${owned ? "owned" : ""}">`;
+        html += `<img src="${escapeHtml(m.img || "icons/svg/mystery-man.svg")}" alt="" class="bcs-manage-spell-icon" />`;
+        html += `<span class="bcs-manage-spell-name">${escapeHtml(m.name)}</span>`;
+        if (owned || justAdded) {
+          html += `<span class="bcs-manage-owned-badge">${justAdded ? "Added" : "In Book"}</span>`;
+        } else {
+          html += `<button class="bcs-manage-add-btn" data-pack-id="${escapeHtml(m._id)}" title="Add to spellbook"><i class="fas fa-plus"></i> Add</button>`;
+        }
+        html += `</div>`;
+      }
+      learnResults.innerHTML = html;
+      learnResults.scrollTop = learnScrollTop;
+
+      // Bind add buttons — local queue, no server call
+      learnResults.querySelectorAll(".bcs-manage-add-btn").forEach((el: Element) => {
+        el.addEventListener("click", async (e: Event) => {
+          e.stopPropagation();
+          const packId = (el as HTMLElement).dataset.packId;
+          if (!packId || this._pendingAddIds.has(packId)) return;
+          const doc = await pack.getDocument(packId);
+          if (!doc) return;
+          const data = doc.toObject();
+          data.system.preparation = { mode: "prepared", prepared: false };
+          this._pendingAddDocs.push(data);
+          this._pendingAddIds.add(packId);
+          this._populateLearnList(learnResults, learnSearch, learnLevelFilter);
+        });
+      });
+    }
+
+    private _setupFeaturePips() {
+      const actor = this.document;
+
+      // Feature use pips — click to toggle, update DOM in-place
       this.element
         .querySelectorAll(".bcs-feat-pip")
         .forEach((el: Element) => {
@@ -1562,15 +1622,15 @@ export function createBetterCharacterSheet(): any {
             if (!usesMax) return;
 
             // Get current spent (pending override or actual)
-            const currentSpent = pendingUsesChanges.has(itemId)
-              ? pendingUsesChanges.get(itemId)!
+            const currentSpent = this._pendingUsesChanges.has(itemId)
+              ? this._pendingUsesChanges.get(itemId)!
               : (Number(item.system.uses?.spent) || 0);
 
             const isFilled = el.classList.contains("filled");
             const newSpent = isFilled
               ? Math.min(currentSpent + 1, usesMax)
               : Math.max(currentSpent - 1, 0);
-            pendingUsesChanges.set(itemId, newSpent);
+            this._pendingUsesChanges.set(itemId, newSpent);
 
             // Update all pips for this item in-place
             const allPipContainers = this.element.querySelectorAll(`[data-item-id="${itemId}"]`);
@@ -1603,15 +1663,15 @@ export function createBetterCharacterSheet(): any {
             const usesMax = Number(item.system.uses?.max) || 0;
             if (!usesMax) return;
 
-            const currentSpent = pendingUsesChanges.has(itemId)
-              ? pendingUsesChanges.get(itemId)!
+            const currentSpent = this._pendingUsesChanges.has(itemId)
+              ? this._pendingUsesChanges.get(itemId)!
               : (Number(item.system.uses?.spent) || 0);
 
             const isMinus = el.classList.contains("bcs-uses-minus");
             const newSpent = isMinus
               ? Math.min(currentSpent + 1, usesMax)
               : Math.max(currentSpent - 1, 0);
-            pendingUsesChanges.set(itemId, newSpent);
+            this._pendingUsesChanges.set(itemId, newSpent);
 
             // Update all numeric displays for this item in-place
             const allContainers = this.element.querySelectorAll(`[data-item-id="${itemId}"]`);
@@ -1624,18 +1684,14 @@ export function createBetterCharacterSheet(): any {
           });
         });
 
-      // Flush pending uses changes on tab change or sheet close
-      this._flushPendingUses = async () => {
-        if (pendingUsesChanges.size === 0) return;
-        const updates = [...pendingUsesChanges.entries()].map(([id, spent]) => ({
-          _id: id, "system.uses.spent": spent,
-        }));
-        pendingUsesChanges.clear();
-        await actor.updateEmbeddedDocuments("Item", updates);
-      };
+      // Flush pending uses changes on tab change
       this.element.querySelectorAll(".bcs-tab-btn").forEach((btn: Element) => {
         btn.addEventListener("click", () => this._flushPendingUses());
       });
+    }
+
+    private _setupCombatActions() {
+      const actor = this.document;
 
       // Combat actions — click to post description to chat
       this.element
@@ -1670,6 +1726,10 @@ export function createBetterCharacterSheet(): any {
             }
           });
         });
+    }
+
+    private _setupActionFeatures() {
+      const actor = this.document;
 
       // Action features — click name to use, double-click to open sheet
       this.element
@@ -1696,8 +1756,12 @@ export function createBetterCharacterSheet(): any {
             if (item) item.sheet.render(true);
           });
         });
+    }
 
-      // 16. Click item/spell name — open item sheet
+    private _setupItemSheets() {
+      const actor = this.document;
+
+      // Click item/spell name — open item sheet
       this.element
         .querySelectorAll(
           ".bcs-inv-row[data-item-id], .bcs-feature-item[data-item-id]"
@@ -1709,8 +1773,12 @@ export function createBetterCharacterSheet(): any {
             if (item) item.sheet.render(true);
           });
         });
+    }
 
-      // 18. Equipped toggle — click the equip checkbox
+    private _setupEquipAttune() {
+      const actor = this.document;
+
+      // Equipped toggle — click the equip checkbox
       this.element
         .querySelectorAll(".bcs-equip-check")
         .forEach((el: Element) => {
@@ -1730,7 +1798,7 @@ export function createBetterCharacterSheet(): any {
           (el as HTMLElement).style.cursor = "pointer";
         });
 
-      // 19. Attunement toggle — click attune checkbox
+      // Attunement toggle — click attune checkbox
       this.element
         .querySelectorAll(".bcs-attune-check")
         .forEach((el: Element) => {
@@ -1747,10 +1815,11 @@ export function createBetterCharacterSheet(): any {
           });
           (el as HTMLElement).style.cursor = "pointer";
         });
+    }
 
-      // ========================================
-      // CURRENCY PANEL
-      // ========================================
+    private _setupCurrencyPanel() {
+      const actor = this.document;
+
       const currencyPanel = this.element.querySelector(".bcs-currency-panel") as HTMLElement;
       const currencyClose = this.element.querySelector(".bcs-currency-close");
       const currencyApply = this.element.querySelector(".bcs-currency-apply");
@@ -1776,10 +1845,11 @@ export function createBetterCharacterSheet(): any {
         actor.update(updates);
         if (currencyPanel) currencyPanel.dataset.panel = "closed";
       });
+    }
 
-      // ========================================
-      // AC EDITING PANEL
-      // ========================================
+    private _setupACPanel() {
+      const actor = this.document;
+
       const acPanel = this.element.querySelector(".bcs-ac-panel") as HTMLElement;
       const acPanelClose = this.element.querySelector(".bcs-ac-panel-close");
       const acPanelApply = this.element.querySelector(".bcs-ac-panel-apply");
@@ -1808,10 +1878,11 @@ export function createBetterCharacterSheet(): any {
         actor.update(updates);
         if (acPanel) acPanel.dataset.panel = "closed";
       });
+    }
 
-      // ========================================
-      // HP EDITING PANEL
-      // ========================================
+    private _setupHPPanel() {
+      const actor = this.document;
+
       const hpPanel = this.element.querySelector(".bcs-hp-panel") as HTMLElement;
       const hpPanelClose = this.element.querySelector(".bcs-hp-panel-close");
       const hpPanelApply = this.element.querySelector(".bcs-hp-panel-apply");
@@ -1838,10 +1909,11 @@ export function createBetterCharacterSheet(): any {
         actor.update(updates);
         if (hpPanel) hpPanel.dataset.panel = "closed";
       });
+    }
 
-      // ========================================
-      // CONDITIONS PANEL
-      // ========================================
+    private _setupConditionsPanel() {
+      const actor = this.document;
+
       const conditionsPanel = this.element.querySelector(".bcs-conditions-panel") as HTMLElement;
       const conditionsClose = this.element.querySelector(".bcs-conditions-close");
 
@@ -1885,10 +1957,11 @@ export function createBetterCharacterSheet(): any {
           }
         });
       });
+    }
 
-      // ========================================
-      // THEME CUSTOMIZATION
-      // ========================================
+    private _setupTheme() {
+      const actor = this.document;
+
       const themePanel = this.element.querySelector(
         ".bcs-theme-panel"
       ) as HTMLElement;
@@ -1971,8 +2044,11 @@ export function createBetterCharacterSheet(): any {
           this.element.removeAttribute("style");
           this.render();
         });
+    }
 
-      // Detail panel: click truncated text to show full description
+    private _setupDetailPanel() {
+      const actor = this.document;
+
       const panel = this.element.querySelector(
         ".bcs-detail-panel"
       ) as HTMLElement;
@@ -2143,7 +2219,9 @@ export function createBetterCharacterSheet(): any {
           resetPanel();
         });
       }
+    }
 
+    private _emitCompatHook(context: any) {
       // modules like ddb-importer (which discover sheet names from
       // CONFIG.Actor.sheetClasses and listen for render{SheetName}
       // with {owner, actor} data) can inject their buttons.
@@ -2159,8 +2237,9 @@ export function createBetterCharacterSheet(): any {
         $(this.element),
         hookData
       );
+    }
 
-      // Restore scroll position after render
+    private _restoreScroll() {
       const savedScrollTop = this._bcsScrollTop;
       if (savedScrollTop > 0) {
         setTimeout(() => {
