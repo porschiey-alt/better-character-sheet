@@ -36,7 +36,7 @@ export function createBetterCharacterSheet(): any {
       {
         classes: ["better-character-sheet", "dnd5e", "character"],
         position: {
-          width: 960,
+          width: 1100,
           height: 780,
           top: 50,
         },
@@ -288,12 +288,13 @@ export function createBetterCharacterSheet(): any {
               max: i.system.uses.max,
               spent: Number(i.system.uses.spent) || 0,
               per: i.system.uses.recovery?.[0]?.type || "",
+              remaining: i.system.uses.max - (Number(i.system.uses.spent) || 0),
             }
           : null;
+        const useNumericDisplay = uses ? uses.max > 7 : false;
         const pips: { filled: boolean }[] = [];
-        if (uses) {
+        if (uses && !useNumericDisplay) {
           for (let p = 0; p < uses.max; p++) {
-            // Spent pips on the left, remaining on the right
             pips.push({ filled: p >= uses.spent });
           }
         }
@@ -339,6 +340,7 @@ export function createBetterCharacterSheet(): any {
             activationLabel: "",
             uses,
             pips,
+            useNumericDisplay,
             isParent: true,
           });
           // Child activity entries without uses
@@ -401,6 +403,7 @@ export function createBetterCharacterSheet(): any {
               activationLabel: labelMap[actType] || "",
               uses,
               pips,
+              useNumericDisplay,
             });
           }
         }
@@ -517,10 +520,12 @@ export function createBetterCharacterSheet(): any {
               max: i.system.uses.max,
               spent: Number(i.system.uses.spent) || 0,
               per: i.system.uses.recovery?.[0]?.type || "",
+              remaining: i.system.uses.max - (Number(i.system.uses.spent) || 0),
             }
           : null;
+        const useNumericDisplay = uses ? uses.max > 7 : false;
         const pips: { filled: boolean }[] = [];
-        if (uses) {
+        if (uses && !useNumericDisplay) {
           for (let p = 0; p < uses.max; p++) {
             pips.push({ filled: p >= uses.spent });
           }
@@ -567,6 +572,7 @@ export function createBetterCharacterSheet(): any {
           hasLongDescription: textOnly.length > 80,
           uses,
           pips,
+          useNumericDisplay,
           subActions,
         };
       }
@@ -637,7 +643,11 @@ export function createBetterCharacterSheet(): any {
 
       // Active conditions on the actor
       const conditions = actor.effects
-        ?.filter((e: any) => e.type === "condition" || e.statuses?.size > 0)
+        ?.filter((e: any) =>
+          (e.type === "condition" || e.statuses?.size > 0) &&
+          !e.statuses?.has("exhaustion") &&
+          !(e.type === "condition" && e.system?.id === "exhaustion")
+        )
         ?.map((e: any) => e.name) || [];
 
       // All available conditions for the conditions panel
@@ -749,6 +759,12 @@ export function createBetterCharacterSheet(): any {
         ownership: "OWNER",
       });
       return controls;
+    }
+
+    /** @override — flush pending uses changes before the sheet closes */
+    async _preClose(options: any) {
+      await this._flushPendingUses?.();
+      return super._preClose(options);
     }
 
     /** @override */
@@ -1570,8 +1586,45 @@ export function createBetterCharacterSheet(): any {
           });
         });
 
-      // Flush pending uses changes on tab change
-      const flushPendingUses = async () => {
+      // Numeric uses +/- buttons (for items with >7 max uses)
+      this.element
+        .querySelectorAll(".bcs-uses-minus, .bcs-uses-plus")
+        .forEach((el: Element) => {
+          el.addEventListener("dblclick", (e: Event) => e.stopPropagation());
+          el.addEventListener("click", (e: Event) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const itemEl = el.closest("[data-item-id]") as HTMLElement;
+            const itemId = itemEl?.dataset.itemId;
+            if (!itemId) return;
+            const item = actor.items.get(itemId);
+            if (!item) return;
+            const usesMax = Number(item.system.uses?.max) || 0;
+            if (!usesMax) return;
+
+            const currentSpent = pendingUsesChanges.has(itemId)
+              ? pendingUsesChanges.get(itemId)!
+              : (Number(item.system.uses?.spent) || 0);
+
+            const isMinus = el.classList.contains("bcs-uses-minus");
+            const newSpent = isMinus
+              ? Math.min(currentSpent + 1, usesMax)
+              : Math.max(currentSpent - 1, 0);
+            pendingUsesChanges.set(itemId, newSpent);
+
+            // Update all numeric displays for this item in-place
+            const allContainers = this.element.querySelectorAll(`[data-item-id="${itemId}"]`);
+            allContainers.forEach((container: Element) => {
+              const numericEl = container.querySelector(".bcs-uses-numeric");
+              if (numericEl) {
+                numericEl.textContent = `${usesMax - newSpent} / ${usesMax}`;
+              }
+            });
+          });
+        });
+
+      // Flush pending uses changes on tab change or sheet close
+      this._flushPendingUses = async () => {
         if (pendingUsesChanges.size === 0) return;
         const updates = [...pendingUsesChanges.entries()].map(([id, spent]) => ({
           _id: id, "system.uses.spent": spent,
@@ -1580,7 +1633,7 @@ export function createBetterCharacterSheet(): any {
         await actor.updateEmbeddedDocuments("Item", updates);
       };
       this.element.querySelectorAll(".bcs-tab-btn").forEach((btn: Element) => {
-        btn.addEventListener("click", () => flushPendingUses());
+        btn.addEventListener("click", () => this._flushPendingUses());
       });
 
       // Combat actions — click to post description to chat
@@ -1721,6 +1774,38 @@ export function createBetterCharacterSheet(): any {
         });
         actor.update(updates);
         if (currencyPanel) currencyPanel.dataset.panel = "closed";
+      });
+
+      // ========================================
+      // AC EDITING PANEL
+      // ========================================
+      const acPanel = this.element.querySelector(".bcs-ac-panel") as HTMLElement;
+      const acPanelClose = this.element.querySelector(".bcs-ac-panel-close");
+      const acPanelApply = this.element.querySelector(".bcs-ac-panel-apply");
+
+      this.element.querySelectorAll('[data-action="open-ac"]').forEach((el: Element) => {
+        el.addEventListener("click", () => {
+          if (acPanel) acPanel.dataset.panel = "open";
+        });
+        (el as HTMLElement).style.cursor = "pointer";
+      });
+
+      acPanelClose?.addEventListener("click", () => {
+        if (acPanel) acPanel.dataset.panel = "closed";
+      });
+
+      acPanelApply?.addEventListener("click", () => {
+        const bonusInput = this.element.querySelector('.bcs-hp-edit-input[data-ac-field="bonus"]') as HTMLInputElement;
+        const flatInput = this.element.querySelector('.bcs-hp-edit-input[data-ac-field="flat"]') as HTMLInputElement;
+        const updates: Record<string, any> = {};
+        if (bonusInput) updates["system.attributes.ac.bonus"] = parseInt(bonusInput.value, 10) || 0;
+        // Flat: empty string or NaN means null (use normal calculation)
+        if (flatInput) {
+          const flatVal = flatInput.value.trim();
+          updates["system.attributes.ac.flat"] = flatVal === "" ? null : parseInt(flatVal, 10);
+        }
+        actor.update(updates);
+        if (acPanel) acPanel.dataset.panel = "closed";
       });
 
       // ========================================

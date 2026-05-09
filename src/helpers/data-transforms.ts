@@ -264,7 +264,7 @@ export function buildConditionTypes(
   statusEffects: any[],
 ): ConditionTypeVM[] {
   return (statusEffects || [])
-    .filter((s: any) => s.id && s.id !== "dead")
+    .filter((s: any) => s.id && s.id !== "dead" && s.id !== "exhaustion")
     .map((s: any) => {
       const isActive = (actorEffects || []).some(
         (e: any) => e.statuses?.has(s.id) || (e.type === "condition" && e.system?.id === s.id)
