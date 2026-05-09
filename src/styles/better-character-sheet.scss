@@ -1747,6 +1747,41 @@ $radius-sm: 4px;
     }
   }
 
+  .bcs-uses-numeric-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .bcs-uses-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid var(--bcs-accent);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--bcs-accent);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+
+    &:hover {
+      background: rgba($gold, 0.2);
+    }
+  }
+
+  .bcs-uses-numeric {
+    font-size: 0.85rem;
+    color: $text-primary;
+    font-weight: 600;
+    min-width: 36px;
+    text-align: center;
+  }
+
   .bcs-feat-recovery {
     font-size: 0.72rem;
     color: $text-muted;

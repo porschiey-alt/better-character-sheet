@@ -142,9 +142,17 @@
     {{/if}}
     {{#if uses}}
     <div class="bcs-action-feature-uses">
+      {{#if useNumericDisplay}}
+      <div class="bcs-uses-numeric-group">
+        <button class="bcs-uses-btn bcs-uses-minus">−</button>
+        <span class="bcs-uses-numeric">{{uses.remaining}} / {{uses.max}}</span>
+        <button class="bcs-uses-btn bcs-uses-plus">+</button>
+      </div>
+      {{else}}
       {{#each pips}}
       <span class="bcs-feat-pip {{#if filled}}filled{{/if}}"></span>
       {{/each}}
+      {{/if}}
     </div>
     {{/if}}
   </div>

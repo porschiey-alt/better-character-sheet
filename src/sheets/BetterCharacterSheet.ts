@@ -298,12 +298,13 @@ export function createBetterCharacterSheet(): any {
               max: i.system.uses.max,
               spent: Number(i.system.uses.spent) || 0,
               per: i.system.uses.recovery?.[0]?.type || "",
+              remaining: i.system.uses.max - (Number(i.system.uses.spent) || 0),
             }
           : null;
+        const useNumericDisplay = uses ? uses.max > 7 : false;
         const pips: { filled: boolean }[] = [];
-        if (uses) {
+        if (uses && !useNumericDisplay) {
           for (let p = 0; p < uses.max; p++) {
-            // Spent pips on the left, remaining on the right
             pips.push({ filled: p >= uses.spent });
           }
         }
@@ -349,6 +350,7 @@ export function createBetterCharacterSheet(): any {
             activationLabel: "",
             uses,
             pips,
+            useNumericDisplay,
             isParent: true,
           });
           // Child activity entries without uses
@@ -411,6 +413,7 @@ export function createBetterCharacterSheet(): any {
               activationLabel: labelMap[actType] || "",
               uses,
               pips,
+              useNumericDisplay,
             });
           }
         }
@@ -527,10 +530,12 @@ export function createBetterCharacterSheet(): any {
               max: i.system.uses.max,
               spent: Number(i.system.uses.spent) || 0,
               per: i.system.uses.recovery?.[0]?.type || "",
+              remaining: i.system.uses.max - (Number(i.system.uses.spent) || 0),
             }
           : null;
+        const useNumericDisplay = uses ? uses.max > 7 : false;
         const pips: { filled: boolean }[] = [];
-        if (uses) {
+        if (uses && !useNumericDisplay) {
           for (let p = 0; p < uses.max; p++) {
             pips.push({ filled: p >= uses.spent });
           }
@@ -577,6 +582,7 @@ export function createBetterCharacterSheet(): any {
           hasLongDescription: textOnly.length > 80,
           uses,
           pips,
+          useNumericDisplay,
           subActions,
         };
       }
@@ -1592,6 +1598,42 @@ export function createBetterCharacterSheet(): any {
                   pip.classList.remove("filled");
                 }
               });
+            });
+          });
+        });
+
+      // Numeric uses +/- buttons (for items with >7 max uses)
+      this.element
+        .querySelectorAll(".bcs-uses-minus, .bcs-uses-plus")
+        .forEach((el: Element) => {
+          el.addEventListener("click", (e: Event) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const itemEl = el.closest("[data-item-id]") as HTMLElement;
+            const itemId = itemEl?.dataset.itemId;
+            if (!itemId) return;
+            const item = actor.items.get(itemId);
+            if (!item) return;
+            const usesMax = Number(item.system.uses?.max) || 0;
+            if (!usesMax) return;
+
+            const currentSpent = pendingUsesChanges.has(itemId)
+              ? pendingUsesChanges.get(itemId)!
+              : (Number(item.system.uses?.spent) || 0);
+
+            const isMinus = el.classList.contains("bcs-uses-minus");
+            const newSpent = isMinus
+              ? Math.min(currentSpent + 1, usesMax)
+              : Math.max(currentSpent - 1, 0);
+            pendingUsesChanges.set(itemId, newSpent);
+
+            // Update all numeric displays for this item in-place
+            const allContainers = this.element.querySelectorAll(`[data-item-id="${itemId}"]`);
+            allContainers.forEach((container: Element) => {
+              const numericEl = container.querySelector(".bcs-uses-numeric");
+              if (numericEl) {
+                numericEl.textContent = `${usesMax - newSpent} / ${usesMax}`;
+              }
             });
           });
         });
