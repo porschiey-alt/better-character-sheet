@@ -1606,6 +1606,7 @@ export function createBetterCharacterSheet(): any {
       this.element
         .querySelectorAll(".bcs-uses-minus, .bcs-uses-plus")
         .forEach((el: Element) => {
+          el.addEventListener("dblclick", (e: Event) => e.stopPropagation());
           el.addEventListener("click", (e: Event) => {
             e.stopPropagation();
             e.preventDefault();
