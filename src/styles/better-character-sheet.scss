@@ -36,12 +36,9 @@ $radius-sm: 4px;
   font-size: 13px;
 
   // Override Foundry's default golden focus glow with accent color
-  button, .bcs-clickable {
-    &:focus, &:focus-visible {
-      outline: none !important;
-      box-shadow: 0 0 0 2px color-mix(in srgb, var(--bcs-accent) 40%, transparent) !important;
-    }
-  }
+  --button-focus-outline-color: var(--bcs-accent) !important;
+  --button-hover-background-color: transparent !important;
+  --button-hover-border-color: var(--bcs-accent-dim) !important;
 
   // Force opaque background on the entire application window
   &.application {
