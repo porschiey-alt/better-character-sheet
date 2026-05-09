@@ -10,6 +10,14 @@ import {
   buildConditionTypes,
   buildCurrency,
   buildEncumbrance,
+  buildSpellcastingInfo,
+  buildSpellsByActivation,
+  buildSpellsByLevel,
+  buildAttacks,
+  buildActionFeatures,
+  buildFeatureItem,
+  buildFeatureGroups,
+  LEVEL_LABELS,
 } from "../helpers/data-transforms.ts";
 
 // ── buildAbilities ──────────────────────────────────────────────────
@@ -443,5 +451,557 @@ describe("buildEncumbrance", () => {
   it("defaults to standard values", () => {
     const enc = buildEncumbrance(null);
     expect(enc).toEqual({ value: 0, max: 150, pct: 0 });
+  });
+});
+
+// ── buildSpellcastingInfo ───────────────────────────────────────────
+
+describe("buildSpellcastingInfo", () => {
+  const systemAbilities: Record<string, any> = {
+    str: { mod: 0 }, dex: { mod: 2 }, con: { mod: 1 },
+    int: { mod: 4 }, wis: { mod: 3 }, cha: { mod: 1 },
+  };
+
+  it("builds spellcasting stats from class items", () => {
+    const classItems = [
+      { name: "Wizard", system: { identifier: "wizard", spellcasting: { ability: "int" }, levels: 5 } },
+    ];
+    const result = buildSpellcastingInfo(classItems, systemAbilities, 3);
+    expect(result.spellcasting).toHaveLength(1);
+    expect(result.spellcasting[0]).toEqual({
+      label: "Wizard",
+      ability: "int",
+      dc: 8 + 3 + 4, // 15
+      attack: 3 + 4,  // 7
+    });
+  });
+
+  it("detects prepared casters and sets showManageSpells", () => {
+    const classItems = [
+      { name: "Cleric", system: { identifier: "Cleric", spellcasting: { ability: "wis" }, levels: 3 } },
+    ];
+    const result = buildSpellcastingInfo(classItems, systemAbilities, 2);
+    expect(result.showManageSpells).toBe(true);
+    expect(result.isWizard).toBe(false);
+  });
+
+  it("detects wizard specifically", () => {
+    const classItems = [
+      { name: "Wizard", system: { identifier: "Wizard", spellcasting: { ability: "int" }, levels: 5 } },
+    ];
+    const result = buildSpellcastingInfo(classItems, systemAbilities, 3);
+    expect(result.isWizard).toBe(true);
+  });
+
+  it("uses preparation.max when available", () => {
+    const classItems = [
+      { name: "Wizard", system: { identifier: "Wizard", spellcasting: { ability: "int", preparation: { max: 12 } }, levels: 8 } },
+    ];
+    const result = buildSpellcastingInfo(classItems, systemAbilities, 3);
+    expect(result.maxPreparedSpells).toBe(12);
+  });
+
+  it("calculates maxPreparedSpells from abilityMod + classLevel when max is 0", () => {
+    const classItems = [
+      { name: "Wizard", system: { identifier: "Wizard", spellcasting: { ability: "int", preparation: { max: 0 } }, levels: 5 } },
+    ];
+    const result = buildSpellcastingInfo(classItems, systemAbilities, 3);
+    expect(result.maxPreparedSpells).toBe(4 + 5); // int mod + level
+  });
+
+  it("returns 0 maxPreparedSpells for non-prepared casters", () => {
+    const classItems = [
+      { name: "Sorcerer", system: { identifier: "sorcerer", spellcasting: { ability: "cha" }, levels: 5 } },
+    ];
+    const result = buildSpellcastingInfo(classItems, systemAbilities, 3);
+    expect(result.showManageSpells).toBe(false);
+    expect(result.maxPreparedSpells).toBe(0);
+  });
+
+  it("handles classes without spellcasting", () => {
+    const classItems = [
+      { name: "Fighter", system: { identifier: "fighter", levels: 5 } },
+    ];
+    const result = buildSpellcastingInfo(classItems, systemAbilities, 2);
+    expect(result.spellcasting).toHaveLength(0);
+    expect(result.showManageSpells).toBe(false);
+  });
+
+  it("handles empty class items", () => {
+    const result = buildSpellcastingInfo([], systemAbilities, 2);
+    expect(result.spellcasting).toEqual([]);
+    expect(result.showManageSpells).toBe(false);
+    expect(result.maxPreparedSpells).toBe(0);
+  });
+});
+
+// ── buildSpellsByActivation ─────────────────────────────────────────
+
+describe("buildSpellsByActivation", () => {
+  it("categorizes bonus action spells", () => {
+    const spells = [
+      { name: "Healing Word", system: { activation: { type: "bonus" }, level: 1 } },
+    ];
+    const result = buildSpellsByActivation(spells, LEVEL_LABELS);
+    expect(result.bonus).toHaveLength(1);
+    expect(result.bonus[0]).toEqual({ name: "Healing Word", level: 1, levelLabel: "1st Level" });
+  });
+
+  it("categorizes reaction spells", () => {
+    const spells = [
+      { name: "Shield", system: { activation: { type: "reaction" }, level: 1 } },
+    ];
+    const result = buildSpellsByActivation(spells, LEVEL_LABELS);
+    expect(result.reaction).toHaveLength(1);
+  });
+
+  it("puts non-action/non-bonus/non-reaction into other", () => {
+    const spells = [
+      { name: "Find Familiar", system: { activation: { type: "hour" }, level: 1 } },
+    ];
+    const result = buildSpellsByActivation(spells, LEVEL_LABELS);
+    expect(result.other).toHaveLength(1);
+  });
+
+  it("does not categorize action spells into any group", () => {
+    const spells = [
+      { name: "Fireball", system: { activation: { type: "action" }, level: 3 } },
+    ];
+    const result = buildSpellsByActivation(spells, LEVEL_LABELS);
+    expect(result.bonus).toHaveLength(0);
+    expect(result.reaction).toHaveLength(0);
+    expect(result.other).toHaveLength(0);
+  });
+
+  it("adds ritual spells to the ritual group", () => {
+    const props = new Set(["ritual"]);
+    const spells = [
+      { name: "Detect Magic", system: { activation: { type: "action" }, level: 1, properties: props } },
+    ];
+    const result = buildSpellsByActivation(spells, LEVEL_LABELS);
+    expect(result.ritual).toHaveLength(1);
+  });
+
+  it("labels cantrips correctly", () => {
+    const spells = [
+      { name: "Fire Bolt", system: { activation: { type: "bonus" }, level: 0 } },
+    ];
+    const result = buildSpellsByActivation(spells, LEVEL_LABELS);
+    expect(result.bonus[0].levelLabel).toBe("Cantrip");
+  });
+
+  it("handles empty spell list", () => {
+    const result = buildSpellsByActivation([], LEVEL_LABELS);
+    expect(result.bonus).toEqual([]);
+    expect(result.reaction).toEqual([]);
+    expect(result.other).toEqual([]);
+    expect(result.ritual).toEqual([]);
+  });
+});
+
+// ── buildSpellsByLevel ──────────────────────────────────────────────
+
+describe("buildSpellsByLevel", () => {
+  it("groups spells by level and sorts alphabetically", () => {
+    const spells = [
+      { id: "2", name: "Shield", img: "s.png", system: { level: 1, activation: { type: "reaction" }, range: {}, properties: new Set() } },
+      { id: "1", name: "Magic Missile", img: "m.png", system: { level: 1, activation: { type: "action" }, range: { value: 120, units: "ft." }, properties: new Set(["vocal", "somatic"]) } },
+    ];
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS);
+    expect(result).toHaveLength(1);
+    expect(result[0].level).toBe(1);
+    expect(result[0].label).toBe("1st Level");
+    expect(result[0].spells[0].name).toBe("Magic Missile");
+    expect(result[0].spells[1].name).toBe("Shield");
+  });
+
+  it("builds cast time abbreviations correctly", () => {
+    const spells = [
+      { id: "1", name: "Fireball", img: "", system: { level: 3, activation: { type: "action" }, range: {}, properties: new Set() } },
+      { id: "2", name: "Healing Word", img: "", system: { level: 1, activation: { type: "bonus" }, range: {}, properties: new Set() } },
+      { id: "3", name: "Shield", img: "", system: { level: 1, activation: { type: "reaction" }, range: {}, properties: new Set() } },
+    ];
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS);
+    const level1 = result.find((g) => g.level === 1)!;
+    const level3 = result.find((g) => g.level === 3)!;
+    expect(level1.spells.find((s) => s.name === "Healing Word")!.castTime).toBe("BA");
+    expect(level1.spells.find((s) => s.name === "Shield")!.castTime).toBe("R");
+    expect(level3.spells[0].castTime).toBe("A");
+  });
+
+  it("resolves range correctly", () => {
+    const spells = [
+      { id: "1", name: "Fireball", img: "", system: { level: 3, activation: { type: "action" }, range: { value: 150, units: "ft." }, properties: new Set() } },
+      { id: "2", name: "Cure Wounds", img: "", system: { level: 1, activation: { type: "action" }, range: { units: "touch" }, properties: new Set() } },
+      { id: "3", name: "Shield", img: "", system: { level: 1, activation: { type: "reaction" }, range: { units: "self" }, properties: new Set() } },
+    ];
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS);
+    const level3 = result.find((g) => g.level === 3)!;
+    expect(level3.spells[0].range).toBe("150 ft.");
+    const level1 = result.find((g) => g.level === 1)!;
+    expect(level1.spells.find((s) => s.name === "Cure Wounds")!.range).toBe("Touch");
+    expect(level1.spells.find((s) => s.name === "Shield")!.range).toBe("Self");
+  });
+
+  it("builds component strings from properties Set", () => {
+    const spells = [
+      { id: "1", name: "Fireball", img: "", system: { level: 3, activation: { type: "action" }, range: {}, properties: new Set(["vocal", "somatic", "material"]) } },
+    ];
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS);
+    expect(result[0].spells[0].components).toBe("V/S/M");
+  });
+
+  it("detects concentration and ritual flags", () => {
+    const spells = [
+      { id: "1", name: "Detect Magic", img: "", system: { level: 1, activation: { type: "action" }, range: {}, properties: new Set(["concentration", "ritual"]) } },
+    ];
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS);
+    expect(result[0].spells[0].concentration).toBe(true);
+    expect(result[0].spells[0].ritual).toBe(true);
+  });
+
+  it("sorts levels numerically", () => {
+    const spells = [
+      { id: "1", name: "Wish", img: "", system: { level: 9, activation: { type: "action" }, range: {}, properties: new Set() } },
+      { id: "2", name: "Fire Bolt", img: "", system: { level: 0, activation: { type: "action" }, range: {}, properties: new Set() } },
+    ];
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS);
+    expect(result[0].level).toBe(0);
+    expect(result[1].level).toBe(9);
+  });
+
+  it("handles empty spell list", () => {
+    expect(buildSpellsByLevel([], LEVEL_LABELS)).toEqual([]);
+  });
+});
+
+// ── buildAttacks ────────────────────────────────────────────────────
+
+describe("buildAttacks", () => {
+  it("builds weapon attacks from resolved weapon data", () => {
+    const weapons = [
+      { id: "w1", name: "Longsword", img: "ls.png", rangeValue: 5, rangeUnits: "ft.", attackFlat: 7, damageFormula: "1d8 + 4" },
+    ];
+    const result = buildAttacks(weapons, [], [], LEVEL_LABELS, "Fighter 5");
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      id: "w1", name: "Longsword", img: "ls.png",
+      source: "Melee Attack", activationType: "attack",
+      range: "5 ft.", toHit: "+7", damage: "1d8 + 4", notes: "",
+    });
+  });
+
+  it("defaults weapon range to 5 ft. when no range value", () => {
+    const weapons = [
+      { id: "w1", name: "Dagger", img: "", damageFormula: "1d4" },
+    ];
+    const result = buildAttacks(weapons, [], [], LEVEL_LABELS, "Rogue 3");
+    expect(result[0].range).toBe("5 ft.");
+  });
+
+  it("shows — for toHit when attackFlat is null", () => {
+    const weapons = [
+      { id: "w1", name: "Dagger", img: "", attackFlat: null, damageFormula: "1d4" },
+    ];
+    const result = buildAttacks(weapons, [], [], LEVEL_LABELS, "Rogue 3");
+    expect(result[0].toHit).toBe("—");
+  });
+
+  it("builds spell attacks from attack activities", () => {
+    const activities = new Map();
+    activities.set("a1", { type: "attack", attack: { type: { value: "ranged" } }, damage: { parts: [{ formula: "1d10" }] } });
+    const spells = [
+      { id: "s1", name: "Fire Bolt", img: "fb.png", system: { level: 0, activities, range: { value: 120, units: "ft." }, properties: new Set(["vocal", "somatic"]) } },
+    ];
+    const scInfo = [{ label: "Wizard", ability: "int", dc: 15, attack: 7 }];
+    const result = buildAttacks([], spells, scInfo, LEVEL_LABELS, "Wizard 5");
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("Fire Bolt");
+    expect(result[0].toHit).toBe("+7");
+    expect(result[0].damage).toBe("1d10");
+    expect(result[0].source).toBe("Cantrip • Wizard");
+    expect(result[0].notes).toBe("V/S");
+  });
+
+  it("builds save+damage spell attacks", () => {
+    const activities = new Map();
+    activities.set("a1", { type: "save", damage: { parts: [{ formula: "8d6" }] } });
+    const spells = [
+      { id: "s1", name: "Fireball", img: "", system: { level: 3, activities, range: { value: 150, units: "ft." }, properties: new Set() } },
+    ];
+    const scInfo = [{ label: "Wizard", ability: "int", dc: 15, attack: 7 }];
+    const result = buildAttacks([], spells, scInfo, LEVEL_LABELS, "Wizard 5");
+    expect(result).toHaveLength(1);
+    expect(result[0].toHit).toBe("DC 15");
+    expect(result[0].damage).toBe("8d6");
+  });
+
+  it("skips spells without attack or save+damage activities", () => {
+    const activities = new Map();
+    activities.set("a1", { type: "utility" });
+    const spells = [
+      { id: "s1", name: "Mage Hand", img: "", system: { level: 0, activities, range: {}, properties: new Set() } },
+    ];
+    const result = buildAttacks([], spells, [], LEVEL_LABELS, "Wizard 5");
+    expect(result).toHaveLength(0);
+  });
+
+  it("skips spells with no activities", () => {
+    const spells = [
+      { id: "s1", name: "Light", img: "", system: { level: 0, range: {}, properties: new Set() } },
+    ];
+    const result = buildAttacks([], spells, [], LEVEL_LABELS, "Wizard 5");
+    expect(result).toHaveLength(0);
+  });
+
+  it("handles touch and self range for spell attacks", () => {
+    const activities = new Map();
+    activities.set("a1", { type: "attack", damage: { parts: [{ formula: "1d8" }] } });
+    const spells = [
+      { id: "s1", name: "Shocking Grasp", img: "", system: { level: 0, activities, range: { units: "touch" }, properties: new Set() } },
+      { id: "s2", name: "Self Spell", img: "", system: { level: 0, activities: new Map([["a1", { type: "attack", damage: { parts: [{ formula: "1d6" }] } }]]), range: { units: "self" }, properties: new Set() } },
+    ];
+    const result = buildAttacks([], spells, [{ label: "W", ability: "int", dc: 15, attack: 7 }], LEVEL_LABELS, "Wizard 5");
+    expect(result[0].range).toBe("Touch");
+    expect(result[1].range).toBe("Self");
+  });
+});
+
+// ── buildActionFeatures ─────────────────────────────────────────────
+
+describe("buildActionFeatures", () => {
+  it("builds a single action feature with uses and pips", () => {
+    const feats = [{
+      id: "f1", name: "Second Wind", img: "sw.png", type: "feat",
+      system: {
+        activation: { type: "bonus" },
+        uses: { value: 1, max: 1, spent: 0, recovery: [{ type: "sr" }] },
+        description: { value: "<p>Heal yourself</p>" },
+        activities: new Map(),
+      },
+    }];
+    const result = buildActionFeatures(feats);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("Second Wind");
+    expect(result[0].activationType).toBe("bonus");
+    expect(result[0].uses).toEqual({ value: 1, max: 1, spent: 0, per: "sr", remaining: 1 });
+    expect(result[0].pips).toEqual([{ filled: true }]);
+  });
+
+  it("uses numeric display when max > 7", () => {
+    const feats = [{
+      id: "f1", name: "Ki Points", img: "", type: "feat",
+      system: {
+        activation: { type: "action" },
+        uses: { value: 10, max: 10, spent: 2, recovery: [{ type: "lr" }] },
+        description: { value: "" },
+        activities: new Map(),
+      },
+    }];
+    const result = buildActionFeatures(feats);
+    expect(result[0].useNumericDisplay).toBe(true);
+    expect(result[0].pips).toEqual([]);
+  });
+
+  it("skips feats without activation, uses, or activities", () => {
+    const feats = [{
+      id: "f1", name: "Passive Feat", img: "", type: "feat",
+      system: { description: { value: "" }, activities: new Map() },
+    }];
+    const result = buildActionFeatures(feats);
+    expect(result).toHaveLength(0);
+  });
+
+  it("expands multi-activity features into parent+children", () => {
+    const activities = new Map();
+    activities.set("a1", { id: "a1", name: "Slash", activation: { type: "action" }, description: { value: "A slash" } });
+    activities.set("a2", { id: "a2", name: "Stab", activation: { type: "bonus" }, description: { value: "A stab" } });
+    const feats = [{
+      id: "f1", name: "Combat Maneuver", img: "cm.png", type: "feat",
+      system: {
+        activation: { type: "action" },
+        uses: { value: 3, max: 3, spent: 1, recovery: [{ type: "sr" }] },
+        description: { value: "<p>Use combat maneuvers</p>" },
+        activities,
+      },
+    }];
+    const result = buildActionFeatures(feats);
+    expect(result).toHaveLength(3); // 1 parent + 2 children
+    expect(result[0].isParent).toBe(true);
+    expect(result[0].uses).not.toBeNull();
+    expect(result[1].isChild).toBe(true);
+    expect(result[1].name).toBe("Slash");
+    expect(result[1].uses).toBeNull();
+    expect(result[2].isChild).toBe(true);
+    expect(result[2].name).toBe("Stab");
+  });
+
+  it("includes feat with uses but 'other' activation type", () => {
+    const feats = [{
+      id: "f1", name: "Lucky", img: "", type: "feat",
+      system: {
+        activation: { type: "special" },
+        uses: { value: 3, max: 3, spent: 0, recovery: [{ type: "lr" }] },
+        description: { value: "" },
+        activities: new Map(),
+      },
+    }];
+    const result = buildActionFeatures(feats);
+    expect(result).toHaveLength(1);
+    expect(result[0].activationType).toBe("other");
+  });
+
+  it("excludes feat with 'other' activation and no uses", () => {
+    const feats = [{
+      id: "f1", name: "Passive", img: "", type: "feat",
+      system: {
+        activation: { type: "minute" },
+        description: { value: "" },
+        activities: new Map(),
+      },
+    }];
+    const result = buildActionFeatures(feats);
+    expect(result).toHaveLength(0);
+  });
+
+  it("truncates long descriptions", () => {
+    const longDesc = "<p>" + "A".repeat(100) + "</p>";
+    const feats = [{
+      id: "f1", name: "Verbose", img: "", type: "feat",
+      system: {
+        activation: { type: "action" },
+        description: { value: longDesc },
+        activities: new Map(),
+      },
+    }];
+    const result = buildActionFeatures(feats);
+    expect(result[0].hasLongDescription).toBe(true);
+    expect(result[0].truncatedDescription.length).toBeLessThanOrEqual(81); // 80 + "…"
+  });
+
+  it("synthesizes child descriptions from activity data when no description", () => {
+    const activities = new Map();
+    activities.set("a1", { id: "a1", name: "Strike", activation: { type: "action" }, damage: { parts: [{ formula: "2d6" }] }, range: { value: 5, units: "ft." } });
+    activities.set("a2", { id: "a2", name: "Parry", activation: { type: "reaction" } });
+    const feats = [{
+      id: "f1", name: "Battle Master", img: "", type: "feat",
+      system: {
+        activation: { type: "action" },
+        uses: { value: 4, max: 4, spent: 0, recovery: [] },
+        description: { value: "" },
+        activities,
+      },
+    }];
+    const result = buildActionFeatures(feats);
+    const strike = result.find((r) => r.name === "Strike")!;
+    expect(strike.truncatedDescription).toContain("Damage: 2d6");
+    expect(strike.truncatedDescription).toContain("Range: 5 ft.");
+  });
+});
+
+// ── buildFeatureItem ────────────────────────────────────────────────
+
+describe("buildFeatureItem", () => {
+  it("builds a feature item with uses and pips", () => {
+    const item = {
+      id: "f1", name: "Action Surge", img: "as.png",
+      system: {
+        uses: { value: 1, max: 1, spent: 0, recovery: [{ type: "sr" }] },
+        description: { value: "<p>Extra action</p>" },
+        requirements: "Fighter 2",
+        activities: new Map(),
+      },
+    };
+    const result = buildFeatureItem(item);
+    expect(result.name).toBe("Action Surge");
+    expect(result.source).toBe("Fighter 2");
+    expect(result.uses).toEqual({ value: 1, max: 1, spent: 0, per: "sr", remaining: 1 });
+    expect(result.pips).toEqual([{ filled: true }]);
+    expect(result.useNumericDisplay).toBe(false);
+  });
+
+  it("returns null uses for items without limited uses", () => {
+    const item = {
+      id: "f1", name: "Passive", img: "",
+      system: { description: { value: "" }, requirements: "", activities: new Map() },
+    };
+    const result = buildFeatureItem(item);
+    expect(result.uses).toBeNull();
+    expect(result.pips).toEqual([]);
+  });
+
+  it("extracts sub-actions from activities with activation types", () => {
+    const activities = new Map();
+    activities.set("a1", { id: "a1", name: "Smite", activation: { type: "action" }, description: { value: "Divine smite" } });
+    activities.set("a2", { id: "a2", name: "Lay on Hands", activation: { type: "bonus" }, description: { value: "" } });
+    const item = {
+      id: "f1", name: "Paladin Features", img: "",
+      system: { description: { value: "" }, requirements: "", activities },
+    };
+    const result = buildFeatureItem(item);
+    expect(result.subActions).toHaveLength(2);
+    expect(result.subActions[0].name).toBe("Smite");
+    expect(result.subActions[0].activationLabel).toBe("Action");
+    expect(result.subActions[1].activationLabel).toBe("Bonus Action");
+  });
+
+  it("truncates feature description at 80 chars", () => {
+    const item = {
+      id: "f1", name: "Verbose", img: "",
+      system: { description: { value: "<p>" + "B".repeat(100) + "</p>" }, requirements: "", activities: new Map() },
+    };
+    const result = buildFeatureItem(item);
+    expect(result.hasLongDescription).toBe(true);
+    expect(result.truncatedDescription.endsWith("…")).toBe(true);
+  });
+
+  it("truncates sub-action descriptions at 60 chars", () => {
+    const activities = new Map();
+    activities.set("a1", { id: "a1", name: "Long Act", activation: { type: "action" }, description: { value: "C".repeat(80) } });
+    const item = {
+      id: "f1", name: "Test", img: "",
+      system: { description: { value: "" }, requirements: "", activities },
+    };
+    const result = buildFeatureItem(item);
+    expect(result.subActions[0].truncatedDescription.length).toBeLessThanOrEqual(61);
+  });
+});
+
+// ── buildFeatureGroups ──────────────────────────────────────────────
+
+describe("buildFeatureGroups", () => {
+  it("groups feat items by type value", () => {
+    const feats = [
+      { id: "1", name: "Action Surge", img: "", system: { type: { value: "class" }, description: { value: "" }, requirements: "", activities: new Map() } },
+      { id: "2", name: "Great Weapon Master", img: "", system: { type: { value: "feat" }, description: { value: "" }, requirements: "", activities: new Map() } },
+      { id: "3", name: "Darkvision", img: "", system: { type: { value: "race" }, description: { value: "" }, requirements: "", activities: new Map() } },
+    ];
+    const groups = buildFeatureGroups(feats);
+    expect(groups).toHaveLength(3);
+    expect(groups[0].type).toBe("class");
+    expect(groups[0].label).toBe("Class Features");
+    expect(groups[0].items).toHaveLength(1);
+    expect(groups[0].items[0].name).toBe("Action Surge");
+    expect(groups[1].type).toBe("feat");
+    expect(groups[1].items).toHaveLength(1);
+    expect(groups[2].type).toBe("race");
+    expect(groups[2].label).toBe("Species Traits");
+    expect(groups[2].items).toHaveLength(1);
+  });
+
+  it("puts items with no type value into the feat group", () => {
+    const feats = [
+      { id: "1", name: "Untyped", img: "", system: { type: {}, description: { value: "" }, requirements: "", activities: new Map() } },
+    ];
+    const groups = buildFeatureGroups(feats);
+    const featGroup = groups.find((g) => g.type === "feat")!;
+    expect(featGroup.items).toHaveLength(1);
+    expect(featGroup.items[0].name).toBe("Untyped");
+  });
+
+  it("returns empty groups when no feats", () => {
+    const groups = buildFeatureGroups([]);
+    expect(groups).toHaveLength(3);
+    expect(groups.every((g) => g.items.length === 0)).toBe(true);
   });
 });

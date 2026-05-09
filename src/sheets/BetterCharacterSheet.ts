@@ -11,8 +11,15 @@ import {
   buildConditionTypes,
   buildCurrency,
   buildEncumbrance,
+  buildSpellcastingInfo,
+  buildSpellsByActivation,
+  buildSpellsByLevel,
+  buildAttacks,
+  buildActionFeatures,
+  buildFeatureGroups,
   LEVEL_LABELS,
 } from "../helpers/data-transforms.ts";
+import type { ResolvedWeaponData } from "../helpers/data-transforms.ts";
 
 /**
  * BetterCharacterSheet — extends the dnd5e CharacterActorSheet,
@@ -185,353 +192,49 @@ export function createBetterCharacterSheet(): any {
       }
 
       // Spellcasting info
-      const spellcasting = classItems
-        .filter((c: any) => c.system?.spellcasting?.ability)
-        .map((c: any) => {
-          const sc = c.system.spellcasting;
-          const abilityMod = system.abilities[sc.ability]?.mod ?? 0;
-          return {
-            label: c.name,
-            ability: sc.ability,
-            dc: 8 + (system.attributes.prof ?? 0) + abilityMod,
-            attack: (system.attributes.prof ?? 0) + abilityMod,
-          };
-        });
-
-      // Spell management: detect prepared casters
-      const preparedCasterIds = new Set(["wizard", "cleric", "druid", "paladin"]);
-      const spellcastingClass = classItems.find((c: any) => {
-        const id = c.system?.identifier?.toLowerCase();
-        return id && preparedCasterIds.has(id) && c.system?.spellcasting?.ability;
-      });
-      const showManageSpells = !!spellcastingClass;
-      const isWizard = spellcastingClass?.system?.identifier?.toLowerCase() === "wizard";
-
-      // Max prepared spells — use dnd5e's computed value from the class
-      let maxPreparedSpells = 0;
-      if (spellcastingClass) {
-        maxPreparedSpells = spellcastingClass.system.spellcasting?.preparation?.max ?? 0;
-        if (!maxPreparedSpells) {
-          const scAbility = spellcastingClass.system.spellcasting.ability;
-          const abilityMod = system.abilities?.[scAbility]?.mod ?? 0;
-          const classLevel = spellcastingClass.system.levels ?? 1;
-          maxPreparedSpells = Math.max(1, abilityMod + classLevel);
-        }
-      }
+      const prof = system.attributes.prof ?? 0;
+      const scInfo = buildSpellcastingInfo(classItems, system.abilities, prof);
+      const { spellcasting, showManageSpells, isWizard, maxPreparedSpells } = scInfo;
 
       // Spell level labels (used by both attacks and spells sections)
       const levelLabels = LEVEL_LABELS;
 
-      // Build attacks from weapons AND attack spells
-      const attacks: any[] = [];
-
-      // Weapons — only equipped
-      for (const i of actor.items.filter((i: any) => i.type === "weapon" && i.system.equipped)) {
-        // Resolve formula references like @mod, @abilities.str.mod
-        let dmgFormula = i.system.damage?.base?.formula || "0";
-        const rollData = i.getRollData?.() || {};
-        dmgFormula = resolveFormula(dmgFormula, rollData);
-
-        attacks.push({
-          id: i.id,
-          name: i.name,
-          img: i.img,
-          source: "Melee Attack",
-          activationType: "attack",
-          range: i.system.range?.value
-            ? `${i.system.range.value} ${i.system.range.units || "ft."}`
-            : "5 ft.",
-          toHit: i.system.attack?.flat != null
-            ? `+${i.system.attack.flat}`
-            : "—",
-          damage: dmgFormula,
-          notes: "",
-        });
-      }
-
-      // Attack spells — only prepared spells with attack or save+damage activities
-      for (const i of actor.items.filter((i: any) => i.type === "spell" && isSpellAvailable(i))) {
-        const acts = i.system.activities;
-        if (!acts) continue;
-
-        let hasAttack = false;
-        let hasSaveDamage = false;
-        let damageFormula = "";
-        let attackType = "";
-
-        for (const act of acts.values()) {
-          if (act.type === "attack") {
-            hasAttack = true;
-            attackType = act.attack?.type?.value || "ranged";
-            damageFormula = act.damage?.parts?.[0]?.formula || damageFormula;
-          }
-          if (act.type === "save" && act.damage?.parts?.[0]?.formula) {
-            hasSaveDamage = true;
-            damageFormula = damageFormula || act.damage.parts[0].formula;
-          }
-        }
-
-        if (!hasAttack && !hasSaveDamage) continue;
-
-        const rng = i.system.range;
-        let range = "—";
-        if (rng?.value) range = `${rng.value} ${rng.units || "ft."}`;
-        else if (rng?.units === "touch") range = "Touch";
-        else if (rng?.units === "self") range = "Self";
-
-        const comps: string[] = [];
-        const props = i.system.properties;
-        if (props?.has?.("vocal")) comps.push("V");
-        if (props?.has?.("somatic")) comps.push("S");
-        if (props?.has?.("material")) comps.push("M");
-
-        const scInfo = spellcasting[0];
-        const hitStr = hasAttack
-          ? `+${scInfo?.attack ?? 0}`
-          : hasSaveDamage ? `DC ${scInfo?.dc ?? 10}` : "—";
-
-        const lvlLabel = i.system.level === 0 ? "Cantrip" : (levelLabels[i.system.level] || "");
-        const className = classLabel.split(" ")[0] || "Spell";
-
-        attacks.push({
-          id: i.id,
-          name: i.name,
-          img: i.img,
-          source: `${lvlLabel} • ${className}`,
-          activationType: "attack",
-          range,
-          toHit: hitStr,
-          damage: damageFormula || "—",
-          notes: comps.length ? comps.join("/") : "",
-        });
-      }
-
-      // Build action features (feats with activation or uses, with descriptions + pips)
-      const actionFeatures: any[] = [];
-      for (const i of actor.items.filter(
-        (i: any) =>
-          i.type === "feat" &&
-          (i.system.uses?.max || i.system.activation?.type || i.system.activities?.size > 0)
-      )) {
-        const uses = i.system.uses?.max
-          ? {
-              value: i.system.uses.value ?? 0,
-              max: i.system.uses.max,
-              spent: Number(i.system.uses.spent) || 0,
-              per: i.system.uses.recovery?.[0]?.type || "",
-              remaining: i.system.uses.max - (Number(i.system.uses.spent) || 0),
-            }
-          : null;
-        const useNumericDisplay = uses ? uses.max > 7 : false;
-        const pips: { filled: boolean }[] = [];
-        if (uses && !useNumericDisplay) {
-          for (let p = 0; p < uses.max; p++) {
-            pips.push({ filled: p >= uses.spent });
-          }
-        }
-
-        const fullDesc = i.system.description?.value || "";
-        const textOnly = fullDesc.replace(/<[^>]*>/g, "").trim();
-        const truncated = textOnly.length > 80
-          ? textOnly.substring(0, 80) + "…"
-          : textOnly;
-
-        const typeMap: Record<string, string> = {
-          action: "action", bonus: "bonus", reaction: "reaction",
-          minute: "other", hour: "other", special: "other",
-        };
-        const labelMap: Record<string, string> = {
-          minute: `${i.system.activation?.value || ""} Minutes`,
-          hour: `${i.system.activation?.value || ""} Hours`,
-        };
-
-        // Expand: create an entry per activity that has an activation type
-        const activities = i.system.activities;
-        const activitiesWithType: any[] = [];
-        if (activities && activities.size > 0) {
-          for (const act of activities.values()) {
-            const at = act.activation?.type;
-            if (at && typeMap[at] && typeMap[at] !== "other") {
-              activitiesWithType.push(act);
-            }
-          }
-        }
-
-        if (activitiesWithType.length > 1) {
-          // Parent entry with uses/pips
-          const parentActType = activitiesWithType[0].activation?.type || "action";
-          actionFeatures.push({
+      // Pre-resolve weapon data (getRollData is a Foundry method — keep it here)
+      const weapons: ResolvedWeaponData[] = actor.items
+        .filter((i: any) => i.type === "weapon" && i.system.equipped)
+        .map((i: any) => {
+          let dmgFormula = i.system.damage?.base?.formula || "0";
+          const rollData = i.getRollData?.() || {};
+          dmgFormula = resolveFormula(dmgFormula, rollData);
+          return {
             id: i.id,
             name: i.name,
             img: i.img,
-            description: fullDesc,
-            truncatedDescription: truncated,
-            hasLongDescription: textOnly.length > 80,
-            activationType: typeMap[parentActType] || "action",
-            activationLabel: "",
-            uses,
-            pips,
-            useNumericDisplay,
-            isParent: true,
-          });
-          // Child activity entries without uses
-          for (const act of activitiesWithType) {
-            const at = act.activation?.type || "other";
-            // Build a description from activity fields
-            let actDesc = act.description?.value || "";
-            if (!actDesc) {
-              // Synthesize a brief summary from activity data
-              const parts: string[] = [];
-              if (act.activation?.type) {
-                const atLabel: Record<string, string> = { action: "Action", bonus: "Bonus Action", reaction: "Reaction" };
-                parts.push(atLabel[act.activation.type] || act.activation.type);
-              }
-              if (act.damage?.parts?.length) {
-                const dmg = act.damage.parts[0];
-                if (dmg.formula) parts.push(`Damage: ${dmg.formula}`);
-              }
-              if (act.range?.value) parts.push(`Range: ${act.range.value} ${act.range.units || "ft."}`);
-              actDesc = parts.join(" · ");
-            }
-            const actTextOnly = actDesc.replace(/<[^>]*>/g, "").trim();
-            const actTruncated = actTextOnly.length > 80
-              ? actTextOnly.substring(0, 80) + "…"
-              : actTextOnly;
-            actionFeatures.push({
-              id: i.id,
-              activityId: act.id || act._id,
-              name: act.name || i.name,
-              img: i.img,
-              description: actDesc || fullDesc,
-              truncatedDescription: actTruncated,
-              hasLongDescription: actTextOnly.length > 80,
-              activationType: typeMap[at] || "other",
-              activationLabel: "",
-              uses: null,
-              pips: [],
-              isChild: true,
-            });
-          }
-        } else {
-          // Single activity or no activities — one entry for the whole item
-          let actType = i.system.activation?.type || "";
-          if (!actType && activitiesWithType.length === 1) {
-            actType = activitiesWithType[0].activation?.type || "";
-          }
-          actType = actType || "other";
-          const activationType = typeMap[actType] || "other";
+            rangeValue: i.system.range?.value,
+            rangeUnits: i.system.range?.units,
+            attackFlat: i.system.attack?.flat,
+            damageFormula: dmgFormula,
+          };
+        });
 
-          // Only include if it has a real activation type or limited uses
-          if (activationType !== "other" || uses) {
-            actionFeatures.push({
-              id: i.id,
-              name: i.name,
-              img: i.img,
-              description: fullDesc,
-              truncatedDescription: truncated,
-              hasLongDescription: textOnly.length > 80,
-              activationType,
-              activationLabel: labelMap[actType] || "",
-              uses,
-              pips,
-              useNumericDisplay,
-            });
-          }
-        }
-      }
-
-      // Categorize spells by activation type for the action tab sections
+      // Available spells (prepared/always/cantrip)
       const allSpellItems = actor.items.filter(
         (i: any) => i.type === "spell"
       );
-
       const spellItems = allSpellItems.filter(isSpellAvailable);
-      const spellsByActivation: Record<string, any[]> = {
-        bonus: [], reaction: [], other: [], ritual: [],
-      };
-      for (const spell of spellItems) {
-        const actType = spell.system.activation?.type || "action";
-        const lvl = spell.system.level ?? 0;
-        const label = lvl === 0 ? "Cantrip" : levelLabels[lvl] || `${lvl}th`;
-        const entry = { name: spell.name, level: lvl, levelLabel: label };
 
-        if (actType === "bonus") spellsByActivation.bonus.push(entry);
-        else if (actType === "reaction") spellsByActivation.reaction.push(entry);
-        else if (actType !== "action") spellsByActivation.other.push(entry);
+      // Build attacks from weapons AND attack spells
+      const attacks = buildAttacks(weapons, spellItems, spellcasting, levelLabels, classLabel);
 
-        // Ritual spells go in "other" section too
-        const props = spell.system.properties;
-        if (props?.has?.("ritual")) {
-          spellsByActivation.ritual.push(entry);
-        }
-      }
+      // Build action features
+      const featItems = actor.items.filter((i: any) => i.type === "feat");
+      const actionFeatures = buildActionFeatures(featItems);
 
-      // Build spells grouped by level with DnDBeyond-style fields
-      const spellLevels: Record<number, any[]> = {};
-      for (const spell of spellItems) {
-        const lvl = spell.system.level ?? 0;
-        if (!spellLevels[lvl]) spellLevels[lvl] = [];
+      // Categorize spells by activation type for the action tab sections
+      const spellsByActivation = buildSpellsByActivation(spellItems, levelLabels);
 
-        // Activation time
-        const actType = spell.system.activation?.type || "";
-        const actVal = spell.system.activation?.value ?? "";
-        const timeMap: Record<string, string> = {
-          action: "A", bonus: "BA", reaction: "R", minute: "m", hour: "h",
-        };
-        const castTime = actVal
-          ? `${actVal}${timeMap[actType] || actType}`
-          : timeMap[actType] || actType || "—";
-
-        // Range
-        const rng = spell.system.range;
-        let range = "—";
-        if (rng?.value) range = `${rng.value} ${rng.units || "ft."}`;
-        else if (rng?.units === "touch") range = "Touch";
-        else if (rng?.units === "self") range = "Self";
-
-        // Components
-        const props = spell.system.properties;
-        const comps: string[] = [];
-        if (props?.has?.("vocal")) comps.push("V");
-        if (props?.has?.("somatic")) comps.push("S");
-        if (props?.has?.("material")) comps.push("M");
-        const components = comps.join("/") || "—";
-
-        // Source class
-        const source = spell.system.sourceItem?.name || "";
-
-        // Effect/damage
-        const dmg = spell.system.damage?.base;
-        const effect = dmg?.formula || (spell.system.healing ? "Healing" : "—");
-
-        spellLevels[lvl].push({
-          id: spell.id,
-          name: spell.name,
-          img: spell.img,
-          level: lvl,
-          castTime,
-          range,
-          hitDc: "—",
-          effect,
-          components,
-          source,
-          prepared:
-            spell.system.method === "prepared"
-              ? spell.system.prepared
-              : true,
-          concentration: props?.has?.("concentration"),
-          ritual: props?.has?.("ritual"),
-        });
-      }
-      const spellsByLevel = Object.entries(spellLevels)
-        .sort(([a], [b]) => Number(a) - Number(b))
-        .map(([lvl, spells]) => ({
-          level: Number(lvl),
-          label: levelLabels[Number(lvl)] || `Level ${lvl}`,
-          spells: spells.sort((a: any, b: any) =>
-            a.name.localeCompare(b.name)
-          ),
-        }));
+      // Build spells grouped by level
+      const spellsByLevel = buildSpellsByLevel(spellItems, levelLabels);
 
       // Spell slots
       const spellSlots = buildSpellSlots(system.spells || {});
@@ -544,106 +247,7 @@ export function createBetterCharacterSheet(): any {
       const encumbrance = buildEncumbrance(system.attributes?.encumbrance);
 
       // Feature groups with descriptions and pips
-      const buildFeatureItem = (i: any) => {
-        const uses = i.system.uses?.max
-          ? {
-              value: i.system.uses.value ?? 0,
-              max: i.system.uses.max,
-              spent: Number(i.system.uses.spent) || 0,
-              per: i.system.uses.recovery?.[0]?.type || "",
-              remaining: i.system.uses.max - (Number(i.system.uses.spent) || 0),
-            }
-          : null;
-        const useNumericDisplay = uses ? uses.max > 7 : false;
-        const pips: { filled: boolean }[] = [];
-        if (uses && !useNumericDisplay) {
-          for (let p = 0; p < uses.max; p++) {
-            pips.push({ filled: p >= uses.spent });
-          }
-        }
-        const fullDesc = i.system.description?.value || "";
-        // Strip HTML tags for truncation
-        const textOnly = fullDesc.replace(/<[^>]*>/g, "").trim();
-        const truncated = textOnly.length > 80
-          ? textOnly.substring(0, 80) + "…"
-          : textOnly;
-
-        // Extract activities with activation types (action/bonus/reaction)
-        const activationLabels: Record<string, string> = {
-          action: "Action", bonus: "Bonus Action", reaction: "Reaction",
-        };
-        const subActions: any[] = [];
-        if (i.system.activities?.size > 0) {
-          for (const act of i.system.activities.values()) {
-            const actType = act.activation?.type || act.type;
-            if (activationLabels[actType]) {
-              const actDesc = act.description?.value || "";
-              const actTextOnly = actDesc.replace(/<[^>]*>/g, "").trim();
-              const actTruncated = actTextOnly.length > 60
-                ? actTextOnly.substring(0, 60) + "…"
-                : actTextOnly;
-              subActions.push({
-                id: act.id || act._id,
-                name: act.name || i.name,
-                activationLabel: activationLabels[actType],
-                truncatedDescription: actTruncated,
-                itemId: i.id,
-              });
-            }
-          }
-        }
-
-        return {
-          id: i.id,
-          name: i.name,
-          img: i.img,
-          source: i.system.requirements || "",
-          description: fullDesc,
-          truncatedDescription: truncated,
-          hasLongDescription: textOnly.length > 80,
-          uses,
-          pips,
-          useNumericDisplay,
-          subActions,
-        };
-      }
-
-      const featureGroups = [
-        {
-          type: "class",
-          label: "Class Features",
-          items: actor.items
-            .filter(
-              (i: any) =>
-                i.type === "feat" &&
-                i.system.type?.value === "class"
-            )
-            .map(buildFeatureItem),
-        },
-        {
-          type: "feat",
-          label: "Feats",
-          items: actor.items
-            .filter(
-              (i: any) =>
-                i.type === "feat" &&
-                (!i.system.type?.value ||
-                  i.system.type?.value === "feat")
-            )
-            .map(buildFeatureItem),
-        },
-        {
-          type: "race",
-          label: "Species Traits",
-          items: actor.items
-            .filter(
-              (i: any) =>
-                i.type === "feat" &&
-                i.system.type?.value === "race"
-            )
-            .map(buildFeatureItem),
-        },
-      ];
+      const featureGroups = buildFeatureGroups(featItems);
       const hasFeatures = featureGroups.some((g) => g.items.length > 0);
 
       // Death saves — show when HP is 0
