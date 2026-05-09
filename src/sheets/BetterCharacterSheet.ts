@@ -74,6 +74,30 @@ export function createBetterCharacterSheet(): any {
     _bcsManagePanelOpen = false;
     _bcsLearnPanelOpen = false;
     _bcsManageScrollTop = 0;
+    /**
+     * Adjust an item's pending uses count in the given direction.
+     * Returns the new state, or null if the item/uses are invalid.
+     */
+    private _adjustItemUses(
+      itemId: string,
+      direction: "increment" | "decrement"
+    ): { newSpent: number; usesMax: number } | null {
+      const item = this.document.items.get(itemId);
+      if (!item) return null;
+      const usesMax = Number(item.system.uses?.max) || 0;
+      if (!usesMax) return null;
+
+      const currentSpent = this._pendingUsesChanges.has(itemId)
+        ? this._pendingUsesChanges.get(itemId)!
+        : (Number(item.system.uses?.spent) || 0);
+
+      const newSpent = direction === "increment"
+        ? Math.min(currentSpent + 1, usesMax)
+        : Math.max(currentSpent - 1, 0);
+
+      this._pendingUsesChanges.set(itemId, newSpent);
+      return { newSpent, usesMax };
+    }
 
     // Pending state maps — cleared each render, flushed on tab/panel change or close
     _pendingUsesChanges = new Map<string, number>();
@@ -1611,33 +1635,19 @@ export function createBetterCharacterSheet(): any {
           el.addEventListener("click", (e: Event) => {
             e.stopPropagation();
             e.preventDefault();
-            const itemEl = el.closest(
-              "[data-item-id]"
-            ) as HTMLElement;
-            const itemId = itemEl?.dataset.itemId;
+            const itemId = (el.closest("[data-item-id]") as HTMLElement)?.dataset.itemId;
             if (!itemId) return;
-            const item = actor.items.get(itemId);
-            if (!item) return;
-            const usesMax = Number(item.system.uses?.max) || 0;
-            if (!usesMax) return;
-
-            // Get current spent (pending override or actual)
-            const currentSpent = this._pendingUsesChanges.has(itemId)
-              ? this._pendingUsesChanges.get(itemId)!
-              : (Number(item.system.uses?.spent) || 0);
 
             const isFilled = el.classList.contains("filled");
-            const newSpent = isFilled
-              ? Math.min(currentSpent + 1, usesMax)
-              : Math.max(currentSpent - 1, 0);
-            this._pendingUsesChanges.set(itemId, newSpent);
+            const result = this._adjustItemUses(itemId, isFilled ? "increment" : "decrement");
+            if (!result) return;
 
             // Update all pips for this item in-place
             const allPipContainers = this.element.querySelectorAll(`[data-item-id="${itemId}"]`);
             allPipContainers.forEach((container: Element) => {
               const pips = container.querySelectorAll(".bcs-feat-pip");
               pips.forEach((pip: Element, idx: number) => {
-                if (idx >= newSpent) {
+                if (idx >= result.newSpent) {
                   pip.classList.add("filled");
                 } else {
                   pip.classList.remove("filled");
@@ -1655,30 +1665,19 @@ export function createBetterCharacterSheet(): any {
           el.addEventListener("click", (e: Event) => {
             e.stopPropagation();
             e.preventDefault();
-            const itemEl = el.closest("[data-item-id]") as HTMLElement;
-            const itemId = itemEl?.dataset.itemId;
+            const itemId = (el.closest("[data-item-id]") as HTMLElement)?.dataset.itemId;
             if (!itemId) return;
-            const item = actor.items.get(itemId);
-            if (!item) return;
-            const usesMax = Number(item.system.uses?.max) || 0;
-            if (!usesMax) return;
-
-            const currentSpent = this._pendingUsesChanges.has(itemId)
-              ? this._pendingUsesChanges.get(itemId)!
-              : (Number(item.system.uses?.spent) || 0);
 
             const isMinus = el.classList.contains("bcs-uses-minus");
-            const newSpent = isMinus
-              ? Math.min(currentSpent + 1, usesMax)
-              : Math.max(currentSpent - 1, 0);
-            this._pendingUsesChanges.set(itemId, newSpent);
+            const result = this._adjustItemUses(itemId, isMinus ? "increment" : "decrement");
+            if (!result) return;
 
             // Update all numeric displays for this item in-place
             const allContainers = this.element.querySelectorAll(`[data-item-id="${itemId}"]`);
             allContainers.forEach((container: Element) => {
               const numericEl = container.querySelector(".bcs-uses-numeric");
               if (numericEl) {
-                numericEl.textContent = `${usesMax - newSpent} / ${usesMax}`;
+                numericEl.textContent = `${result.usesMax - result.newSpent} / ${result.usesMax}`;
               }
             });
           });
