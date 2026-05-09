@@ -35,6 +35,14 @@ $radius-sm: 4px;
   color: $text-primary;
   font-size: 13px;
 
+  // Override Foundry's default golden focus glow on all interactive elements
+  button, .bcs-clickable {
+    &:focus, &:focus-visible {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+  }
+
   // Force opaque background on the entire application window
   &.application {
     background: var(--bcs-bg-dark) !important;
@@ -855,8 +863,15 @@ $radius-sm: 4px;
     white-space: nowrap;
     transition: all 0.15s;
     margin-bottom: -2px;
+    outline: none;
+    box-shadow: none;
 
-    &:hover { color: $text-secondary; }
+    &:hover { color: $text-secondary; box-shadow: none; }
+    &:focus, &:focus-visible {
+      outline: none;
+      box-shadow: none;
+      color: var(--bcs-accent);
+    }
     &.active {
       color: var(--bcs-accent);
       border-bottom-color: var(--bcs-accent);
