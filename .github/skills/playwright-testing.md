@@ -13,7 +13,7 @@ When verifying visual changes to the character sheet, debugging CSS issues, or c
 - `test/foundry-helper.mjs` — Join as Tester, open sheet via sidebar, screenshot
 - `test/debug-sheet.mjs` — Open sheet via API, check DOM, capture errors
 - `test/screenshot-tabs.mjs` — Screenshot all 7 tabs sequentially
-- `test/header-fix2.mjs` — Open sheet via API, verify header DOM structure
+
 
 ## Common Patterns
 
