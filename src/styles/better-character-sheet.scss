@@ -35,10 +35,17 @@ $radius-sm: 4px;
   color: $text-primary;
   font-size: 13px;
 
-  // Override Foundry's default golden focus glow with accent color
+  // Override Foundry/dnd5e's warm-colored focus & hover glow with accent color
   --button-focus-outline-color: var(--bcs-accent) !important;
   --button-hover-background-color: transparent !important;
   --button-hover-border-color: var(--bcs-accent-dim) !important;
+
+  button, .bcs-clickable {
+    &:hover, &:focus, &:focus-visible {
+      outline-color: var(--bcs-accent) !important;
+      box-shadow: 0 0 5px var(--bcs-accent) !important;
+    }
+  }
 
   // Force opaque background on the entire application window
   &.application {
