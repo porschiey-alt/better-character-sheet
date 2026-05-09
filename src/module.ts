@@ -41,6 +41,7 @@ Hooks.once("init", () => {
   // so users can switch back from classic view
   Hooks.on("getHeaderControlsCharacterActorSheet", (config: any, controls: any[]) => {
     if (!config.document?.isOwner) return;
+    if (config.constructor.name === "BetterCharacterSheet") return;
     controls.unshift({
       icon: "fas fa-exchange-alt",
       label: "Better Sheet",
