@@ -2,7 +2,7 @@ import { createBetterCharacterSheet } from "./sheets/BetterCharacterSheet.ts";
 import { registerDDBBackdropHook } from "./helpers/ddb-backdrop.ts";
 
 const MODULE_ID = "better-character-sheet";
-const TEMPLATES_PATH = `modules/${MODULE_ID}/templates`;
+const TEMPLATES_PATH = `modules/${MODULE_ID}/templates`; // relative to Data/modules
 
 // Register the sheet when Foundry initializes.
 // At `init` time, dnd5e globals are available so we can safely extend its classes.

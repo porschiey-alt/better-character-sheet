@@ -653,7 +653,11 @@ export function createBetterCharacterSheet(): any {
 
       // Active conditions on the actor
       const conditions = actor.effects
-        ?.filter((e: any) => e.type === "condition" || e.statuses?.size > 0)
+        ?.filter((e: any) =>
+          (e.type === "condition" || e.statuses?.size > 0) &&
+          !e.statuses?.has("exhaustion") &&
+          !(e.type === "condition" && e.system?.id === "exhaustion")
+        )
         ?.map((e: any) => e.name) || [];
 
       // All available conditions for the conditions panel
