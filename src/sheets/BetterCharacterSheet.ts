@@ -35,7 +35,7 @@ export function createBetterCharacterSheet(): any {
       {
         classes: ["better-character-sheet", "dnd5e", "character"],
         position: {
-          width: 960,
+          width: 1100,
           height: 780,
           top: 50,
         },
