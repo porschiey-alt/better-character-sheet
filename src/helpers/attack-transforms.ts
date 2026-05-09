@@ -86,12 +86,12 @@ export function buildAttacks(
     let hasAttack = false;
     let hasSaveDamage = false;
     let damageFormula = "";
-    let attackType = "";
+    let attackType: "melee" | "ranged" = "ranged";
 
     for (const act of acts.values()) {
       if (act.type === "attack") {
         hasAttack = true;
-        attackType = act.attack?.type?.value || "ranged";
+        attackType = act.attack?.type?.value === "melee" ? "melee" : "ranged";
         damageFormula = act.damage?.parts?.[0]?.formula || damageFormula;
       }
       if (act.type === "save" && act.damage?.parts?.[0]?.formula) {
@@ -126,7 +126,9 @@ export function buildAttacks(
       id: i.id,
       name: i.name,
       img: i.img,
-      source: `${lvlLabel} • ${className}`,
+      source: hasAttack
+        ? `${attackType === "melee" ? "Melee" : "Ranged"} • ${lvlLabel} • ${className}`
+        : `${lvlLabel} • ${className}`,
       activationType: "attack",
       range,
       toHit: hitStr,

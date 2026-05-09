@@ -85,7 +85,7 @@ describe("buildAttacks", () => {
     expect(result[0].name).toBe("Fire Bolt");
     expect(result[0].toHit).toBe("+7");
     expect(result[0].damage).toBe("1d10");
-    expect(result[0].source).toBe("Cantrip • Wizard");
+    expect(result[0].source).toBe("Ranged • Cantrip • Wizard");
     expect(result[0].notes).toBe("V/S");
   });
 
@@ -100,6 +100,20 @@ describe("buildAttacks", () => {
     expect(result).toHaveLength(1);
     expect(result[0].toHit).toBe("DC 15");
     expect(result[0].damage).toBe("8d6");
+    expect(result[0].source).toBe("3rd Level • Wizard");
+  });
+
+  it("labels melee spell attacks correctly", () => {
+    const activities = new Map();
+    activities.set("a1", { type: "attack", attack: { type: { value: "melee" } }, damage: { parts: [{ formula: "3d10" }] } });
+    const spells = [
+      { id: "s1", name: "Inflict Wounds", img: "", system: { level: 1, activities, range: { units: "touch" }, properties: new Set(["vocal", "somatic"]) } },
+    ];
+    const scInfo = [{ label: "Cleric", ability: "wis", dc: 14, attack: 6 }];
+    const result = buildAttacks([], spells, scInfo, LEVEL_LABELS, "Cleric 3");
+    expect(result).toHaveLength(1);
+    expect(result[0].source).toBe("Melee • 1st Level • Cleric");
+    expect(result[0].range).toBe("Touch");
   });
 
   it("skips spells without attack or save+damage activities", () => {

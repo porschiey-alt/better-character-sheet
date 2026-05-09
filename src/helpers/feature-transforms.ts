@@ -86,7 +86,6 @@ export function buildActionFeatures(featItems: any[]): ActionFeatureVM[] {
     action: "action", bonus: "bonus", reaction: "reaction",
     minute: "other", hour: "other", special: "other",
   };
-  const labelMap: Record<string, string> = {};
 
   for (const i of featItems) {
     if (!(i.system.uses?.max || i.system.activation?.type || i.system.activities?.size > 0)) {
@@ -104,9 +103,11 @@ export function buildActionFeatures(featItems: any[]): ActionFeatureVM[] {
 
     const { fullDesc, textOnly, truncated } = truncateHtml(i.system.description?.value, 80);
 
-    // Build per-item label map entries for minute/hour activation
-    labelMap["minute"] = `${i.system.activation?.value || ""} Minutes`;
-    labelMap["hour"] = `${i.system.activation?.value || ""} Hours`;
+    // Per-item label map for activation types that need a value prefix
+    const labelMap: Record<string, string> = {
+      minute: `${i.system.activation?.value || ""} Minutes`,
+      hour: `${i.system.activation?.value || ""} Hours`,
+    };
 
     // Expand: create an entry per activity that has an activation type
     const activities = i.system.activities;
