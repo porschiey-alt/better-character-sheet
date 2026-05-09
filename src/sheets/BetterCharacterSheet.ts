@@ -767,6 +767,12 @@ export function createBetterCharacterSheet(): any {
       return controls;
     }
 
+    /** @override — flush pending uses changes before the sheet closes */
+    async _preClose(options: any) {
+      await this._flushPendingUses?.();
+      return super._preClose(options);
+    }
+
     /** @override */
     async _onRender(context: any, options: any) {
       // Skip dnd5e's _onRender (it expects DOM elements from its own templates).
@@ -1639,8 +1645,8 @@ export function createBetterCharacterSheet(): any {
           });
         });
 
-      // Flush pending uses changes on tab change
-      const flushPendingUses = async () => {
+      // Flush pending uses changes on tab change or sheet close
+      this._flushPendingUses = async () => {
         if (pendingUsesChanges.size === 0) return;
         const updates = [...pendingUsesChanges.entries()].map(([id, spent]) => ({
           _id: id, "system.uses.spent": spent,
@@ -1649,7 +1655,7 @@ export function createBetterCharacterSheet(): any {
         await actor.updateEmbeddedDocuments("Item", updates);
       };
       this.element.querySelectorAll(".bcs-tab-btn").forEach((btn: Element) => {
-        btn.addEventListener("click", () => flushPendingUses());
+        btn.addEventListener("click", () => this._flushPendingUses());
       });
 
       // Combat actions — click to post description to chat
