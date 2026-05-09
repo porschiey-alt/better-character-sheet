@@ -863,15 +863,8 @@ $radius-sm: 4px;
     white-space: nowrap;
     transition: all 0.15s;
     margin-bottom: -2px;
-    outline: none;
-    box-shadow: none;
 
-    &:hover { color: $text-secondary; box-shadow: none; }
-    &:focus, &:focus-visible {
-      outline: none;
-      box-shadow: none;
-      color: var(--bcs-accent);
-    }
+    &:hover { color: $text-secondary; }
     &.active {
       color: var(--bcs-accent);
       border-bottom-color: var(--bcs-accent);
