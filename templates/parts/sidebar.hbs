@@ -5,7 +5,7 @@
     <h3 class="bcs-section-title">Saving Throws</h3>
     <ul class="bcs-save-list">
       {{#each saves}}
-      <li class="bcs-save-item" data-ability="{{key}}">
+      <li class="bcs-save-item" data-ability="{{key}}" data-action="rollSave">
         <span class="bcs-prof-dot {{#if proficient}}proficient{{/if}}"></span>
         <span class="bcs-save-label">{{abbr}}</span>
         <span class="bcs-save-mod">{{ dnd5e-formatModifier mod }}</span>

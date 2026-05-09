@@ -1,7 +1,7 @@
 {{!-- Ability Scores Row: Horizontal bar of 6 abilities --}}
 <div class="bcs-ability-row">
   {{#each abilities}}
-  <div class="bcs-ability" data-ability="{{key}}">
+  <div class="bcs-ability" data-ability="{{key}}" data-action="rollAbility">
     <div class="bcs-ability-mod">{{ dnd5e-formatModifier mod }}</div>
     <div class="bcs-ability-label">{{abbr}}</div>
     <div class="bcs-ability-score">{{value}}</div>

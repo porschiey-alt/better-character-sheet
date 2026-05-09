@@ -58,6 +58,16 @@ export function createBetterCharacterSheet(): any {
           heal: BetterCharacterSheet.#onHeal,
           damage: BetterCharacterSheet.#onDamage,
           toggleClassicSheet: BetterCharacterSheet.#onToggleClassicSheet,
+          rollAbility: BetterCharacterSheet.#onRollAbility,
+          rollSave: BetterCharacterSheet.#onRollSave,
+          rollSkill: BetterCharacterSheet.#onRollSkill,
+          rollInitiative: BetterCharacterSheet.#onRollInitiative,
+          rollDeathSave: BetterCharacterSheet.#onRollDeathSave,
+          toggleInspiration: BetterCharacterSheet.#onToggleInspiration,
+          postCombatAction: BetterCharacterSheet.#onPostCombatAction,
+          toggleEquipped: BetterCharacterSheet.#onToggleEquipped,
+          toggleAttunement: BetterCharacterSheet.#onToggleAttunement,
+          useAttack: BetterCharacterSheet.#onUseAttack,
         },
       },
       { inplace: false }
@@ -383,6 +393,85 @@ export function createBetterCharacterSheet(): any {
       setTimeout(() => actor.sheet.render(true), 100);
     }
 
+    static #onRollAbility(this: any, event: Event, target: HTMLElement) {
+      const ability = target.dataset.ability;
+      if (ability) this.document.rollAbilityCheck({ ability, event });
+    }
+
+    static #onRollSave(this: any, event: Event, target: HTMLElement) {
+      const ability = target.dataset.ability;
+      if (ability) this.document.rollSavingThrow({ ability, event });
+    }
+
+    static #onRollSkill(this: any, event: Event, target: HTMLElement) {
+      const skill = target.dataset.skill;
+      if (skill) this.document.rollSkill({ skill, event });
+    }
+
+    static #onRollInitiative(this: any, event: Event) {
+      this.document.rollInitiativeDialog({ event });
+    }
+
+    static #onRollDeathSave(this: any, event: Event) {
+      event.stopPropagation();
+      this.document.rollDeathSave({ event, legacy: false });
+    }
+
+    static #onToggleInspiration(this: any) {
+      this.document.update({
+        "system.attributes.inspiration":
+          !this.document.system.attributes.inspiration,
+      });
+    }
+
+    static #onPostCombatAction(this: any, _event: Event, target: HTMLElement) {
+      const name = target.dataset.actionName;
+      const desc = target.dataset.actionDesc;
+      if (!name) return;
+      ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: this.document }),
+        content: `<h3>${name}</h3><p>${desc || ""}</p>`,
+      });
+    }
+
+    static #onToggleEquipped(this: any, event: Event, target: HTMLElement) {
+      event.stopPropagation();
+      event.preventDefault();
+      const row = target.closest("[data-item-id]") as HTMLElement;
+      const itemId = row?.dataset.itemId;
+      if (!itemId) return;
+      const item = this.document.items.get(itemId);
+      if (!item) return;
+      const current = typeof item.system.equipped === "object"
+        ? item.system.equipped?.value
+        : item.system.equipped;
+      item.update({ "system.equipped": !current });
+    }
+
+    static #onToggleAttunement(this: any, event: Event, target: HTMLElement) {
+      event.stopPropagation();
+      event.preventDefault();
+      const row = target.closest("[data-item-id]") as HTMLElement;
+      const itemId = row?.dataset.itemId;
+      if (!itemId) return;
+      const item = this.document.items.get(itemId);
+      if (!item) return;
+      const isAttuned = item.system.attuned ?? (item.system.attunement === "attuned");
+      item.update({ "system.attuned": !isAttuned });
+    }
+
+    static #onUseAttack(this: any, event: Event, target: HTMLElement) {
+      const itemId = target.dataset.itemId;
+      const item = this.document.items.get(itemId);
+      if (!item) return;
+      const activity = item.system.activities?.values()?.next()?.value;
+      if (activity) {
+        activity.use({ event, legacy: false });
+      } else {
+        item.use({ event, legacy: false });
+      }
+    }
+
     override _getHeaderControls() {
       const controls = super._getHeaderControls();
       controls.unshift({
@@ -615,47 +704,10 @@ export function createBetterCharacterSheet(): any {
     }
 
     private _setupRolls() {
-      const actor = this.document;
-
-      // Ability checks — click ability score block
-      this.element
-        .querySelectorAll(".bcs-ability[data-ability]")
-        .forEach((el: Element) => {
-          el.addEventListener("click", (e: Event) => {
-            const ability = (el as HTMLElement).dataset.ability;
-            if (ability) actor.rollAbilityCheck({ ability, event: e });
-          });
-        });
-
-      // Saving throws — click save row
-      this.element
-        .querySelectorAll(".bcs-save-item[data-ability]")
-        .forEach((el: Element) => {
-          el.addEventListener("click", (e: Event) => {
-            const ability = (el as HTMLElement).dataset.ability;
-            if (ability) actor.rollSavingThrow({ ability, event: e });
-          });
-        });
-
-      // Skill checks — click skill row
-      this.element
-        .querySelectorAll(".bcs-skill-item[data-skill]")
-        .forEach((el: Element) => {
-          el.addEventListener("click", (e: Event) => {
-            const skill = (el as HTMLElement).dataset.skill;
-            if (skill) actor.rollSkill({ skill, event: e });
-          });
-        });
-
-      // Initiative — click initiative stat block
-      this.element
-        .querySelectorAll(".bcs-combat-init")
-        .forEach((el: Element) => {
-          el.addEventListener("click", (e: Event) => {
-            actor.rollInitiativeDialog({ event: e });
-          });
-          (el as HTMLElement).style.cursor = "pointer";
-        });
+      // 1. Ability checks — handled by data-action="rollAbility"
+      // 2. Saving throws — handled by data-action="rollSave"
+      // 3. Skill checks — handled by data-action="rollSkill"
+      // 4. Initiative — handled by data-action="rollInitiative"
     }
 
     private _setupDeathSaves() {
@@ -682,15 +734,7 @@ export function createBetterCharacterSheet(): any {
           (el as HTMLElement).style.cursor = "pointer";
         });
 
-      // Death save roll button
-      this.element
-        .querySelectorAll(".bcs-ds-roll-btn")
-        .forEach((el: Element) => {
-          el.addEventListener("click", (e: Event) => {
-            e.stopPropagation();
-            actor.rollDeathSave({ event: e, legacy: false });
-          });
-        });
+      // Death save roll button — handled by data-action="rollDeathSave"
 
       // Death saves heal button — heal 1 HP to stabilize
       this.element
@@ -706,27 +750,7 @@ export function createBetterCharacterSheet(): any {
     }
 
     private _setupAttacks() {
-      const actor = this.document;
-
-      // Attack rolls — click attack row to use the item
-      this.element
-        .querySelectorAll(
-          ".bcs-attack-row[data-item-id]"
-        )
-        .forEach((el: Element) => {
-          el.addEventListener("click", (e: Event) => {
-            const itemId = (el as HTMLElement).dataset.itemId;
-            const item = actor.items.get(itemId);
-            if (!item) return;
-            const activity = item.system.activities?.values()?.next()?.value;
-            if (activity) {
-              activity.use({ event: e, legacy: false });
-            } else {
-              item.use({ event: e, legacy: false });
-            }
-          });
-          (el as HTMLElement).style.cursor = "pointer";
-        });
+      // 6. Attack rolls — handled by data-action="useAttack"
     }
 
     private _setupSpellDetailPanel() {
@@ -874,18 +898,7 @@ export function createBetterCharacterSheet(): any {
     }
 
     private _setupInspiration() {
-      const actor = this.document;
-
-      this.element
-        .querySelectorAll(".bcs-inspiration")
-        .forEach((el: Element) => {
-          el.addEventListener("click", () => {
-            actor.update({
-              "system.attributes.inspiration":
-                !actor.system.attributes.inspiration,
-            });
-          });
-        });
+      // 11. Inspiration toggle — handled by data-action="toggleInspiration"
     }
 
     private _setupSpellSlotPips() {
@@ -1297,20 +1310,7 @@ export function createBetterCharacterSheet(): any {
     private _setupCombatActions() {
       const actor = this.document;
 
-      // Combat actions — click to post description to chat
-      this.element
-        .querySelectorAll(".bcs-combat-action")
-        .forEach((el: Element) => {
-          el.addEventListener("click", () => {
-            const name = (el as HTMLElement).dataset.actionName;
-            const desc = (el as HTMLElement).dataset.actionDesc;
-            if (!name) return;
-            ChatMessage.create({
-              speaker: ChatMessage.getSpeaker({ actor }),
-              content: `<h3>${name}</h3><p>${desc || ""}</p>`,
-            });
-          });
-        });
+      // Combat actions — handled by data-action="postCombatAction"
 
       // Action tab spell references — click to cast
       this.element
@@ -1380,45 +1380,8 @@ export function createBetterCharacterSheet(): any {
     }
 
     private _setupEquipAttune() {
-      const actor = this.document;
-
-      // Equipped toggle — click the equip checkbox
-      this.element
-        .querySelectorAll(".bcs-equip-check")
-        .forEach((el: Element) => {
-          el.addEventListener("click", (e: Event) => {
-            e.stopPropagation();
-            e.preventDefault();
-            const row = el.closest("[data-item-id]") as HTMLElement;
-            const itemId = row?.dataset.itemId;
-            if (!itemId) return;
-            const item = actor.items.get(itemId);
-            if (!item) return;
-            const current = typeof item.system.equipped === "object"
-              ? item.system.equipped?.value
-              : item.system.equipped;
-            item.update({ "system.equipped": !current });
-          });
-          (el as HTMLElement).style.cursor = "pointer";
-        });
-
-      // Attunement toggle — click attune checkbox
-      this.element
-        .querySelectorAll(".bcs-attune-check")
-        .forEach((el: Element) => {
-          el.addEventListener("click", (e: Event) => {
-            e.stopPropagation();
-            e.preventDefault();
-            const row = el.closest("[data-item-id]") as HTMLElement;
-            const itemId = row?.dataset.itemId;
-            if (!itemId) return;
-            const item = actor.items.get(itemId);
-            if (!item) return;
-            const isAttuned = item.system.attuned ?? (item.system.attunement === "attuned");
-            item.update({ "system.attuned": !isAttuned });
-          });
-          (el as HTMLElement).style.cursor = "pointer";
-        });
+      // 18. Equipped toggle — handled by data-action="toggleEquipped"
+      // 19. Attunement toggle — handled by data-action="toggleAttunement"
     }
 
     private _setupCurrencyPanel() {
