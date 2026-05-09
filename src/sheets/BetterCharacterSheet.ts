@@ -867,12 +867,11 @@ export function createBetterCharacterSheet(): any {
                 .querySelectorAll(".bcs-spell-level-section")
                 .forEach((sec: Element) => {
                   const el = sec as HTMLElement;
-                  if (spellFilter === "all") {
-                    el.style.display = "";
-                  } else {
-                    el.style.display =
-                      el.dataset.spellLevel === spellFilter ? "" : "none";
-                  }
+                  el.classList.toggle(
+                    "bcs-hidden",
+                    spellFilter !== "all" &&
+                      el.dataset.spellLevel !== spellFilter
+                  );
                 });
             }
 
@@ -883,12 +882,10 @@ export function createBetterCharacterSheet(): any {
                 .querySelectorAll(".bcs-inv-section")
                 .forEach((sec: Element) => {
                   const el = sec as HTMLElement;
-                  if (invFilter === "all") {
-                    el.style.display = "";
-                  } else {
-                    el.style.display =
-                      el.dataset.invType === invFilter ? "" : "none";
-                  }
+                  el.classList.toggle(
+                    "bcs-hidden",
+                    invFilter !== "all" && el.dataset.invType !== invFilter
+                  );
                 });
             }
 
@@ -899,12 +896,10 @@ export function createBetterCharacterSheet(): any {
                 .querySelectorAll(".bcs-feature-group")
                 .forEach((sec: Element) => {
                   const el = sec as HTMLElement;
-                  if (featFilter === "all") {
-                    el.style.display = "";
-                  } else {
-                    el.style.display =
-                      el.dataset.featType === featFilter ? "" : "none";
-                  }
+                  el.classList.toggle(
+                    "bcs-hidden",
+                    featFilter !== "all" && el.dataset.featType !== featFilter
+                  );
                 });
             }
 
@@ -916,23 +911,25 @@ export function createBetterCharacterSheet(): any {
                 .querySelectorAll(".bcs-attack-row")
                 .forEach((row: Element) => {
                   const el = row as HTMLElement;
-                  if (actionFilter === "all") el.style.display = "";
-                  else if (actionFilter === "attack") el.style.display = "";
-                  else el.style.display = "none";
+                  el.classList.toggle(
+                    "bcs-hidden",
+                    actionFilter !== "all" && actionFilter !== "attack"
+                  );
                 });
               // Filter action sections and features
               this.element
                 .querySelectorAll(".bcs-action-section, .bcs-action-feature")
                 .forEach((sec: Element) => {
                   const el = sec as HTMLElement;
+                  let shouldHide = false;
                   if (actionFilter === "all") {
-                    el.style.display = "";
+                    shouldHide = false;
                   } else if (actionFilter === "limited") {
-                    el.style.display = el.dataset.limited === "true" ? "" : "none";
+                    shouldHide = el.dataset.limited !== "true";
                   } else {
-                    const type = el.dataset.actionType || "";
-                    el.style.display = type === actionFilter ? "" : "none";
+                    shouldHide = (el.dataset.actionType || "") !== actionFilter;
                   }
+                  el.classList.toggle("bcs-hidden", shouldHide);
                 });
             }
           });
