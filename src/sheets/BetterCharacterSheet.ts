@@ -1803,6 +1803,38 @@ export function createBetterCharacterSheet(): any {
       });
 
       // ========================================
+      // AC EDITING PANEL
+      // ========================================
+      const acPanel = this.element.querySelector(".bcs-ac-panel") as HTMLElement;
+      const acPanelClose = this.element.querySelector(".bcs-ac-panel-close");
+      const acPanelApply = this.element.querySelector(".bcs-ac-panel-apply");
+
+      this.element.querySelectorAll('[data-action="open-ac"]').forEach((el: Element) => {
+        el.addEventListener("click", () => {
+          if (acPanel) acPanel.dataset.panel = "open";
+        });
+        (el as HTMLElement).style.cursor = "pointer";
+      });
+
+      acPanelClose?.addEventListener("click", () => {
+        if (acPanel) acPanel.dataset.panel = "closed";
+      });
+
+      acPanelApply?.addEventListener("click", () => {
+        const bonusInput = this.element.querySelector('.bcs-hp-edit-input[data-ac-field="bonus"]') as HTMLInputElement;
+        const flatInput = this.element.querySelector('.bcs-hp-edit-input[data-ac-field="flat"]') as HTMLInputElement;
+        const updates: Record<string, any> = {};
+        if (bonusInput) updates["system.attributes.ac.bonus"] = parseInt(bonusInput.value, 10) || 0;
+        // Flat: empty string or NaN means null (use normal calculation)
+        if (flatInput) {
+          const flatVal = flatInput.value.trim();
+          updates["system.attributes.ac.flat"] = flatVal === "" ? null : parseInt(flatVal, 10);
+        }
+        actor.update(updates);
+        if (acPanel) acPanel.dataset.panel = "closed";
+      });
+
+      // ========================================
       // HP EDITING PANEL
       // ========================================
       const hpPanel = this.element.querySelector(".bcs-hp-panel") as HTMLElement;

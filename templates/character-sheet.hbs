@@ -116,7 +116,7 @@
     <div class="bcs-col-right">
       {{!-- Combat row: AC, Initiative, Defenses/Conditions --}}
       <div class="bcs-combat-row">
-        <div class="bcs-combat-card bcs-combat-ac">
+        <div class="bcs-combat-card bcs-combat-ac bcs-clickable" data-action="open-ac">
           <i class="fas fa-shield-alt bcs-combat-card-bg"></i>
           <div class="bcs-combat-card-value">{{system.attributes.ac.value}}</div>
           <div class="bcs-combat-card-label">Armor Class</div>
@@ -247,6 +247,29 @@
         <input type="number" class="bcs-currency-input" data-currency="cp" value="{{currency.cp}}" min="0" />
       </div>
       <button type="button" class="bcs-panel-apply bcs-currency-apply">Apply</button>
+    </div>
+  </div>
+
+  {{!-- AC editing panel --}}
+  <div class="bcs-ac-panel" data-panel="closed">
+    <div class="bcs-panel-header">
+      <h3 class="bcs-panel-title"><i class="fas fa-shield-alt"></i> Armor Class</h3>
+      <button type="button" class="bcs-ac-panel-close"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="bcs-panel-body">
+      <div class="bcs-ac-summary">
+        <span class="bcs-ac-summary-label">Computed AC</span>
+        <span class="bcs-ac-summary-value">{{system.attributes.ac.value}}</span>
+      </div>
+      <div class="bcs-hp-edit-row">
+        <label>AC Bonus / Penalty</label>
+        <input type="number" class="bcs-hp-edit-input" data-ac-field="bonus" value="{{system.attributes.ac.bonus}}" />
+      </div>
+      <div class="bcs-hp-edit-row">
+        <label>Flat Override <span class="bcs-field-hint">(leave empty to use normal calculation)</span></label>
+        <input type="number" class="bcs-hp-edit-input" data-ac-field="flat" value="{{system.attributes.ac.flat}}" placeholder="—" />
+      </div>
+      <button type="button" class="bcs-panel-apply bcs-ac-panel-apply">Apply</button>
     </div>
   </div>
 

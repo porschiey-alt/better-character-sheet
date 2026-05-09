@@ -2308,9 +2308,10 @@ $radius-sm: 4px;
     font-size: 0.85rem;
   }
 
-  // ===== SHARED SLIDE-OUT PANEL STYLES (Currency, HP) =====
+  // ===== SHARED SLIDE-OUT PANEL STYLES (Currency, HP, AC) =====
   .bcs-currency-panel,
   .bcs-hp-panel,
+  .bcs-ac-panel,
   .bcs-conditions-panel {
     position: absolute;
     top: 0;
@@ -2363,6 +2364,36 @@ $radius-sm: 4px;
     padding: 16px;
     flex: 1;
     overflow-y: auto;
+  }
+
+  .bcs-ac-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    background: var(--bcs-bg-card-alt);
+    border-radius: $radius;
+    border: 1px solid $border-color;
+  }
+
+  .bcs-ac-summary-label {
+    color: $text-secondary;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  .bcs-ac-summary-value {
+    color: var(--bcs-accent);
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+
+  .bcs-field-hint {
+    font-weight: 400;
+    font-size: 0.72rem;
+    color: $text-muted;
+    font-style: italic;
   }
 
   .bcs-currency-row,
