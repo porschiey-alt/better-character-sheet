@@ -465,14 +465,17 @@ export function createBetterCharacterSheet(): any {
 
     private _setupBackdrop(context: any) {
       if (context.backdropUrl) {
-        const header = this.element.querySelector(".bcs-header") as HTMLElement | null;
-        if (header) {
-          header.style.setProperty(
-            "background",
-            `linear-gradient(to right, rgba(18,21,26,0.85), rgba(18,21,26,0.5)), url('${context.backdropUrl}') center / cover no-repeat`,
-            "important"
-          );
-          header.classList.add("bcs-has-backdrop");
+        const rawUrl = String(context.backdropUrl).replace(/'/g, "");
+        if (/^https?:\/\//i.test(rawUrl)) {
+          const header = this.element.querySelector(".bcs-header") as HTMLElement | null;
+          if (header) {
+            header.style.setProperty(
+              "background",
+              `linear-gradient(to right, rgba(18,21,26,0.85), rgba(18,21,26,0.5)), url('${rawUrl}') center / cover no-repeat`,
+              "important"
+            );
+            header.classList.add("bcs-has-backdrop");
+          }
         }
       }
     }
@@ -950,6 +953,7 @@ export function createBetterCharacterSheet(): any {
           }
         }
 
+ 
         // Restore panel state after re-render
         if (this._bcsManagePanelOpen) {
           this._populateManagePanel(manageBody, isWizardClass, maxPrep);
