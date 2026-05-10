@@ -21,6 +21,11 @@ $hp-bar-fill: #44813a;
 $radius: 6px;
 $radius-sm: 4px;
 
+// Utility class for filter-driven visibility toggling
+.bcs-hidden {
+  display: none !important;
+}
+
 .better-character-sheet {
   // CSS custom properties for theming
   --bcs-accent: #{$gold};

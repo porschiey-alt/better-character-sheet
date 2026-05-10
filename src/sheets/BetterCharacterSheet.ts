@@ -112,16 +112,15 @@ export function createBetterCharacterSheet(): any {
     _pendingAddDocs: any[] = [];
     _pendingAddIds = new Set<string>();
 
-    /** @override — save scroll position before DOM is replaced */
-    async _preRender(context: any, options: any) {
+    // Save scroll position before DOM is replaced
+    override async _preRender(context: any, options: any) {
       await super._preRender(context, options);
       const tabContent = this.element?.querySelector(".bcs-tab-content") as HTMLElement;
       if (tabContent) this._bcsScrollTop = tabContent.scrollTop;
       const manageBody = this.element?.querySelector(".bcs-manage-body") as HTMLElement;
       if (manageBody) this._bcsManageScrollTop = manageBody.scrollTop;
     }
-    /** @override */
-    async _prepareContext(options: any) {
+    override async _prepareContext(options: any) {
       const context = await super._prepareContext(options);
       const system = context.system;
       const actor = context.actor;
@@ -384,8 +383,7 @@ export function createBetterCharacterSheet(): any {
       setTimeout(() => actor.sheet.render(true), 100);
     }
 
-    /** @override */
-    _getHeaderControls() {
+    override _getHeaderControls() {
       const controls = super._getHeaderControls();
       controls.unshift({
         icon: "fas fa-exchange-alt",
@@ -396,14 +394,13 @@ export function createBetterCharacterSheet(): any {
       return controls;
     }
 
-    /** @override — flush pending uses changes before the sheet closes */
-    async _preClose(options: any) {
+    // Flush pending uses changes before the sheet closes
+    override async _preClose(options: any) {
       await this._flushPendingUses();
       return super._preClose(options);
     }
 
-    /** @override */
-    async _onRender(context: any, options: any) {
+    override async _onRender(context: any, options: any) {
       // Skip dnd5e's _onRender (it expects DOM elements from its own templates).
       // Go directly to the Foundry framework's base _onRender.
       const baseProto =
@@ -468,14 +465,17 @@ export function createBetterCharacterSheet(): any {
 
     private _setupBackdrop(context: any) {
       if (context.backdropUrl) {
-        const header = this.element.querySelector(".bcs-header") as HTMLElement | null;
-        if (header) {
-          header.style.setProperty(
-            "background",
-            `linear-gradient(to right, rgba(18,21,26,0.85), rgba(18,21,26,0.5)), url('${context.backdropUrl}') center / cover no-repeat`,
-            "important"
-          );
-          header.classList.add("bcs-has-backdrop");
+        const rawUrl = String(context.backdropUrl).replace(/'/g, "");
+        if (/^https?:\/\//i.test(rawUrl)) {
+          const header = this.element.querySelector(".bcs-header") as HTMLElement | null;
+          if (header) {
+            header.style.setProperty(
+              "background",
+              `linear-gradient(to right, rgba(18,21,26,0.85), rgba(18,21,26,0.5)), url('${rawUrl}') center / cover no-repeat`,
+              "important"
+            );
+            header.classList.add("bcs-has-backdrop");
+          }
         }
       }
     }
@@ -542,12 +542,11 @@ export function createBetterCharacterSheet(): any {
                 .querySelectorAll(".bcs-spell-level-section")
                 .forEach((sec: Element) => {
                   const el = sec as HTMLElement;
-                  if (spellFilter === "all") {
-                    el.style.display = "";
-                  } else {
-                    el.style.display =
-                      el.dataset.spellLevel === spellFilter ? "" : "none";
-                  }
+                  el.classList.toggle(
+                    "bcs-hidden",
+                    spellFilter !== "all" &&
+                      el.dataset.spellLevel !== spellFilter
+                  );
                 });
             }
 
@@ -558,12 +557,10 @@ export function createBetterCharacterSheet(): any {
                 .querySelectorAll(".bcs-inv-section")
                 .forEach((sec: Element) => {
                   const el = sec as HTMLElement;
-                  if (invFilter === "all") {
-                    el.style.display = "";
-                  } else {
-                    el.style.display =
-                      el.dataset.invType === invFilter ? "" : "none";
-                  }
+                  el.classList.toggle(
+                    "bcs-hidden",
+                    invFilter !== "all" && el.dataset.invType !== invFilter
+                  );
                 });
             }
 
@@ -574,12 +571,10 @@ export function createBetterCharacterSheet(): any {
                 .querySelectorAll(".bcs-feature-group")
                 .forEach((sec: Element) => {
                   const el = sec as HTMLElement;
-                  if (featFilter === "all") {
-                    el.style.display = "";
-                  } else {
-                    el.style.display =
-                      el.dataset.featType === featFilter ? "" : "none";
-                  }
+                  el.classList.toggle(
+                    "bcs-hidden",
+                    featFilter !== "all" && el.dataset.featType !== featFilter
+                  );
                 });
             }
 
@@ -591,23 +586,25 @@ export function createBetterCharacterSheet(): any {
                 .querySelectorAll(".bcs-attack-row")
                 .forEach((row: Element) => {
                   const el = row as HTMLElement;
-                  if (actionFilter === "all") el.style.display = "";
-                  else if (actionFilter === "attack") el.style.display = "";
-                  else el.style.display = "none";
+                  el.classList.toggle(
+                    "bcs-hidden",
+                    actionFilter !== "all" && actionFilter !== "attack"
+                  );
                 });
               // Filter action sections and features
               this.element
                 .querySelectorAll(".bcs-action-section, .bcs-action-feature")
                 .forEach((sec: Element) => {
                   const el = sec as HTMLElement;
+                  let shouldHide = false;
                   if (actionFilter === "all") {
-                    el.style.display = "";
+                    shouldHide = false;
                   } else if (actionFilter === "limited") {
-                    el.style.display = el.dataset.limited === "true" ? "" : "none";
+                    shouldHide = el.dataset.limited !== "true";
                   } else {
-                    const type = el.dataset.actionType || "";
-                    el.style.display = type === actionFilter ? "" : "none";
+                    shouldHide = (el.dataset.actionType || "") !== actionFilter;
                   }
+                  el.classList.toggle("bcs-hidden", shouldHide);
                 });
             }
           });
@@ -1133,7 +1130,7 @@ export function createBetterCharacterSheet(): any {
           if (!item) return;
           const confirmed = await Dialog.confirm({
             title: "Remove Spell",
-            content: `<p>Remove <strong>${item.name}</strong> from your spellbook?</p>`,
+            content: `<p>Remove <strong>${escapeHtml(item.name)}</strong> from your spellbook?</p>`,
           });
           if (confirmed) {
             await item.delete();
