@@ -1763,12 +1763,13 @@ export function createBetterCharacterSheet(): any {
       this.element
         .querySelector(".bcs-theme-reset")
         ?.addEventListener("click", async () => {
-          await actor.unsetFlag("better-character-sheet", "themeAccent");
-          await actor.unsetFlag("better-character-sheet", "themeBg");
-          await actor.unsetFlag("better-character-sheet", "themeGradient");
-          await actor.unsetFlag("better-character-sheet", "themeGradientDir");
+          await actor.update({
+            "flags.better-character-sheet.-=themeAccent": null,
+            "flags.better-character-sheet.-=themeBg": null,
+            "flags.better-character-sheet.-=themeGradient": null,
+            "flags.better-character-sheet.-=themeGradientDir": null,
+          });
           this.element.removeAttribute("style");
-          this.render();
         });
     }
 
