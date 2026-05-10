@@ -16,6 +16,10 @@ describe("escapeHtml", () => {
     expect(escapeHtml('"hello"')).toBe("&quot;hello&quot;");
   });
 
+  it("escapes single quotes", () => {
+    expect(escapeHtml("it's")).toBe("it&#39;s");
+  });
+
   it("handles XSS payload in item name", () => {
     expect(escapeHtml('<img src=x onerror=alert(1)>')).toBe(
       "&lt;img src=x onerror=alert(1)&gt;"
