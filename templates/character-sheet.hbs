@@ -261,13 +261,25 @@
         <span class="bcs-ac-summary-label">Computed AC</span>
         <span class="bcs-ac-summary-value">{{system.attributes.ac.value}}</span>
       </div>
-      <div class="bcs-hp-edit-row">
-        <label>AC Bonus / Penalty</label>
-        <input type="number" class="bcs-hp-edit-input" data-ac-field="bonus" value="{{system.attributes.ac.bonus}}" />
+      <div class="bcs-ac-breakdown">
+        {{#each acBreakdown.parts}}
+        <div class="bcs-ac-breakdown-row">
+          <span class="bcs-ac-breakdown-label">{{label}}</span>
+          <span class="bcs-ac-breakdown-value">{{value}}</span>
+        </div>
+        {{/each}}
       </div>
       <div class="bcs-hp-edit-row">
-        <label>Flat Override <span class="bcs-field-hint">(leave empty to use normal calculation)</span></label>
-        <input type="number" class="bcs-hp-edit-input" data-ac-field="flat" value="{{system.attributes.ac.flat}}" placeholder="—" />
+        <label>Base AC <span class="bcs-field-hint">(overrides armor value, leave empty for normal)</span></label>
+        <input type="number" class="bcs-hp-edit-input" data-ac-field="base" value="{{acBaseOverride}}" placeholder="—" />
+      </div>
+      <div class="bcs-hp-edit-row">
+        <label>Modifier Override <span class="bcs-field-hint">(overrides DEX contribution)</span></label>
+        <input type="number" class="bcs-hp-edit-input" data-ac-field="modifier" value="{{acModifierOverride}}" placeholder="—" />
+      </div>
+      <div class="bcs-hp-edit-row">
+        <label>Flat Total <span class="bcs-field-hint">(overrides entire AC number)</span></label>
+        <input type="number" class="bcs-hp-edit-input" data-ac-field="flat" value="{{acFlatOverride}}" placeholder="—" />
       </div>
       <button type="button" class="bcs-panel-apply bcs-ac-panel-apply">Apply</button>
     </div>

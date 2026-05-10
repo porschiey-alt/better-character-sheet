@@ -2,7 +2,7 @@
   "id": "better-character-sheet",
   "title": "Better Character Sheet",
   "description": "A DnDBeyond-inspired character sheet replacement for the D&amp;D 5th Edition system in FoundryVTT.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "license": "MIT",
   "readme": "https://github.com/porschiey-alt/better-character-sheet/blob/master/README.md",
   "bugs": "https://github.com/porschiey-alt/better-character-sheet/issues",
