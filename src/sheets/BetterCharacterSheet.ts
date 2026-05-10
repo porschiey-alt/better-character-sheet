@@ -1591,7 +1591,11 @@ export function createBetterCharacterSheet(): any {
         const modVal = modInput?.value?.trim() ?? "";
         const flatVal = flatInput?.value?.trim() ?? "";
 
-        const toFlag = (v: string) => v === "" ? null : parseInt(v, 10);
+        const toFlag = (v: string) => {
+          if (v === "") return null;
+          const n = parseInt(v, 10);
+          return isNaN(n) ? null : n;
+        };
 
         // Single update: flags (to remember inputs) + system data (so dnd5e
         // uses the correct AC for attack resolution).
