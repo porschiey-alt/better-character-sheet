@@ -191,6 +191,7 @@ export function buildSpellsByActivation(
 export function buildSpellsByLevel(
   spellItems: any[],
   levelLabels: string[],
+  spellcastingInfo: SpellcastingInfoVM["spellcasting"] = [],
 ): SpellByLevelVM[] {
   const spellLevels: Record<number, SpellByLevelEntryVM[]> = {};
   for (const spell of spellItems) {
@@ -223,6 +224,21 @@ export function buildSpellsByLevel(
     const dmg = spell.system.damage?.base;
     const effect = dmg?.formula || (spell.system.healing ? "Healing" : "—");
 
+    // Determine Hit/DC from spell activities (attack takes precedence over save)
+    let hitDc = "—";
+    const acts = spell.system.activities;
+    if (acts) {
+      let hasAttack = false;
+      let hasSave = false;
+      for (const act of acts.values()) {
+        if (act.type === "attack") hasAttack = true;
+        if (act.type === "save") hasSave = true;
+      }
+      const scInfo = spellcastingInfo[0];
+      if (hasAttack) hitDc = `+${scInfo?.attack ?? 0}`;
+      else if (hasSave) hitDc = `DC ${scInfo?.dc ?? 10}`;
+    }
+
     spellLevels[lvl].push({
       id: spell.id,
       name: spell.name,
@@ -230,7 +246,7 @@ export function buildSpellsByLevel(
       level: lvl,
       castTime,
       range,
-      hitDc: "—",
+      hitDc,
       effect,
       components,
       source,

@@ -282,7 +282,7 @@ describe("buildSpellsByLevel", () => {
       { id: "2", name: "Shield", img: "s.png", system: { level: 1, activation: { type: "reaction" }, range: {}, properties: new Set() } },
       { id: "1", name: "Magic Missile", img: "m.png", system: { level: 1, activation: { type: "action" }, range: { value: 120, units: "ft." }, properties: new Set(["vocal", "somatic"]) } },
     ];
-    const result = buildSpellsByLevel(spells, LEVEL_LABELS);
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS, []);
     expect(result).toHaveLength(1);
     expect(result[0].level).toBe(1);
     expect(result[0].label).toBe("1st Level");
@@ -296,7 +296,7 @@ describe("buildSpellsByLevel", () => {
       { id: "2", name: "Healing Word", img: "", system: { level: 1, activation: { type: "bonus" }, range: {}, properties: new Set() } },
       { id: "3", name: "Shield", img: "", system: { level: 1, activation: { type: "reaction" }, range: {}, properties: new Set() } },
     ];
-    const result = buildSpellsByLevel(spells, LEVEL_LABELS);
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS, []);
     const level1 = result.find((g) => g.level === 1)!;
     const level3 = result.find((g) => g.level === 3)!;
     expect(level1.spells.find((s) => s.name === "Healing Word")!.castTime).toBe("BA");
@@ -310,7 +310,7 @@ describe("buildSpellsByLevel", () => {
       { id: "2", name: "Cure Wounds", img: "", system: { level: 1, activation: { type: "action" }, range: { units: "touch" }, properties: new Set() } },
       { id: "3", name: "Shield", img: "", system: { level: 1, activation: { type: "reaction" }, range: { units: "self" }, properties: new Set() } },
     ];
-    const result = buildSpellsByLevel(spells, LEVEL_LABELS);
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS, []);
     const level3 = result.find((g) => g.level === 3)!;
     expect(level3.spells[0].range).toBe("150 ft.");
     const level1 = result.find((g) => g.level === 1)!;
@@ -322,7 +322,7 @@ describe("buildSpellsByLevel", () => {
     const spells = [
       { id: "1", name: "Fireball", img: "", system: { level: 3, activation: { type: "action" }, range: {}, properties: new Set(["vocal", "somatic", "material"]) } },
     ];
-    const result = buildSpellsByLevel(spells, LEVEL_LABELS);
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS, []);
     expect(result[0].spells[0].components).toBe("V/S/M");
   });
 
@@ -330,7 +330,7 @@ describe("buildSpellsByLevel", () => {
     const spells = [
       { id: "1", name: "Detect Magic", img: "", system: { level: 1, activation: { type: "action" }, range: {}, properties: new Set(["concentration", "ritual"]) } },
     ];
-    const result = buildSpellsByLevel(spells, LEVEL_LABELS);
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS, []);
     expect(result[0].spells[0].concentration).toBe(true);
     expect(result[0].spells[0].ritual).toBe(true);
   });
@@ -340,12 +340,74 @@ describe("buildSpellsByLevel", () => {
       { id: "1", name: "Wish", img: "", system: { level: 9, activation: { type: "action" }, range: {}, properties: new Set() } },
       { id: "2", name: "Fire Bolt", img: "", system: { level: 0, activation: { type: "action" }, range: {}, properties: new Set() } },
     ];
-    const result = buildSpellsByLevel(spells, LEVEL_LABELS);
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS, []);
     expect(result[0].level).toBe(0);
     expect(result[1].level).toBe(9);
   });
 
   it("handles empty spell list", () => {
-    expect(buildSpellsByLevel([], LEVEL_LABELS)).toEqual([]);
+    expect(buildSpellsByLevel([], LEVEL_LABELS, [])).toEqual([]);
+  });
+
+  it("shows attack bonus for spells with attack activities", () => {
+    const spells = [
+      {
+        id: "1", name: "Fire Bolt", img: "", system: {
+          level: 0, activation: { type: "action" }, range: { value: 120, units: "ft." },
+          properties: new Set(["vocal", "somatic"]),
+          activities: new Map([["a1", { type: "attack" }]]),
+        },
+      },
+    ];
+    const scInfo = [{ label: "Wizard", ability: "int", dc: 15, attack: 7 }];
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS, scInfo);
+    expect(result[0].spells[0].hitDc).toBe("+7");
+  });
+
+  it("shows save DC for spells with save activities", () => {
+    const spells = [
+      {
+        id: "1", name: "Fireball", img: "", system: {
+          level: 3, activation: { type: "action" }, range: { value: 150, units: "ft." },
+          properties: new Set(["vocal", "somatic", "material"]),
+          activities: new Map([["a1", { type: "save" }]]),
+        },
+      },
+    ];
+    const scInfo = [{ label: "Wizard", ability: "int", dc: 15, attack: 7 }];
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS, scInfo);
+    expect(result[0].spells[0].hitDc).toBe("DC 15");
+  });
+
+  it("attack takes precedence over save when both present", () => {
+    const spells = [
+      {
+        id: "1", name: "Chromatic Orb", img: "", system: {
+          level: 1, activation: { type: "action" }, range: { value: 90, units: "ft." },
+          properties: new Set(["vocal", "somatic", "material"]),
+          activities: new Map([
+            ["a1", { type: "save" }],
+            ["a2", { type: "attack" }],
+          ]),
+        },
+      },
+    ];
+    const scInfo = [{ label: "Sorcerer", ability: "cha", dc: 14, attack: 6 }];
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS, scInfo);
+    expect(result[0].spells[0].hitDc).toBe("+6");
+  });
+
+  it("shows dash for spells with no activities", () => {
+    const spells = [
+      {
+        id: "1", name: "Shield", img: "", system: {
+          level: 1, activation: { type: "reaction" }, range: { units: "self" },
+          properties: new Set(["vocal", "somatic"]),
+        },
+      },
+    ];
+    const scInfo = [{ label: "Wizard", ability: "int", dc: 15, attack: 7 }];
+    const result = buildSpellsByLevel(spells, LEVEL_LABELS, scInfo);
+    expect(result[0].spells[0].hitDc).toBe("—");
   });
 });

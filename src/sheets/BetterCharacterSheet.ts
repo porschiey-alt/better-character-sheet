@@ -233,7 +233,7 @@ export function createBetterCharacterSheet(): any {
       const spellsByActivation = buildSpellsByActivation(spellItems, levelLabels);
 
       // Build spells grouped by level
-      const spellsByLevel = buildSpellsByLevel(spellItems, levelLabels);
+      const spellsByLevel = buildSpellsByLevel(spellItems, levelLabels, spellcasting);
 
       // Spell slots
       const spellSlots = buildSpellSlots(system.spells || {});
