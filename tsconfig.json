@@ -5,6 +5,7 @@
     "moduleResolution": "bundler",
     "esModuleInterop": true,
     "strict": true,
+    "noImplicitOverride": true,
     "noEmit": true,
     "outDir": "./dist",
     "rootDir": "./src",
