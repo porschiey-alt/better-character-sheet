@@ -334,6 +334,10 @@ export function createBetterCharacterSheet(): any {
         attunementMax,
         attunementCount,
         backdropUrl,
+        acBaseOverride: this.document.getFlag("better-character-sheet", "acBase") ?? "",
+        acModifierOverride: this.document.getFlag("better-character-sheet", "acModifier") ?? "",
+        acFlatOverride: this.document.getFlag("better-character-sheet", "acFlat") ?? "",
+        acBreakdown: this._buildACBreakdown(system.attributes.ac),
         themeAccent: actor.getFlag("better-character-sheet", "themeAccent") || "#c8a85c",
         themeBg: actor.getFlag("better-character-sheet", "themeBg") || "#12151a",
         themeGradient: actor.getFlag("better-character-sheet", "themeGradient") || "#12151a",
@@ -1451,12 +1455,121 @@ export function createBetterCharacterSheet(): any {
       });
     }
 
+    /**
+     * Build a human-readable AC formula breakdown from dnd5e's derived AC data,
+     * reflecting any flag-based overrides.
+     */
+    private _buildACBreakdown(ac: any): { parts: { label: string; value: number }[] } {
+      const parts: { label: string; value: number }[] = [];
+      const flat = this.document.getFlag("better-character-sheet", "acFlat") as number | undefined;
+
+      if (flat != null) {
+        parts.push({ label: "Flat Override", value: flat });
+        return { parts };
+      }
+
+      const baseOvr = this.document.getFlag("better-character-sheet", "acBase") as number | undefined;
+      const modOvr = this.document.getFlag("better-character-sheet", "acModifier") as number | undefined;
+
+      // Base armor
+      if (baseOvr != null) {
+        parts.push({ label: "Base (override)", value: baseOvr });
+      } else {
+        const armorName = ac.equippedArmor?.name;
+        parts.push({ label: armorName ?? "Base", value: ac.armor ?? 10 });
+      }
+
+      // DEX / modifier
+      if (modOvr != null) {
+        parts.push({ label: "Modifier (override)", value: modOvr });
+      } else if (ac.dex != null && ac.dex !== 0) {
+        parts.push({ label: "DEX", value: ac.dex });
+      }
+
+      // Shield
+      if (ac.shield) {
+        const shieldName = ac.equippedShield?.name ?? "Shield";
+        parts.push({ label: shieldName, value: ac.shield });
+      }
+
+      // Bonus — break down by Active Effect sources with fallback
+      if (ac.bonus) {
+        const effectSources = this._getACBonusSources();
+        const explainedTotal = effectSources.reduce((sum, s) => sum + s.value, 0);
+        const remainder = ac.bonus - explainedTotal;
+        effectSources.forEach((src) => parts.push(src));
+        if (remainder) {
+          parts.push({ label: effectSources.length ? "Other" : "Bonus", value: remainder });
+        }
+      }
+
+      // Cover
+      if (ac.cover) {
+        parts.push({ label: "Cover", value: ac.cover });
+      }
+
+      return { parts };
+    }
+
+    /**
+     * Find all Active Effects contributing to AC bonus and return labelled values.
+     */
+    private _getACBonusSources(): { label: string; value: number }[] {
+      const sources: { label: string; value: number }[] = [];
+      for (const effect of this.document.allApplicableEffects()) {
+        if (effect.disabled || effect.isSuppressed) continue;
+        for (const change of effect.changes) {
+          if (change.key !== "system.attributes.ac.bonus") continue;
+          const val = parseInt(change.value, 10);
+          if (!val) continue;
+          const label = (effect.parent !== this.document ? effect.parent?.name : null)
+            ?? effect.name
+            ?? "Bonus";
+          sources.push({ label, value: val });
+        }
+      }
+      return sources;
+    }
+
+    /**
+     * Build the dnd5e system updates that make our flag-based AC overrides real.
+     * - Flat → calc:"flat", flat:<value>
+     * - Base and/or Modifier → calc:"custom", formula:"<base> + <mod>"
+     * - Nothing → calc:"default"
+     */
+    private _buildACSystemUpdates(
+      baseVal: string, modVal: string, flatVal: string
+    ): Record<string, any> {
+      const updates: Record<string, any> = {};
+      if (flatVal !== "") {
+        const flatNum = parseInt(flatVal, 10);
+        if (!isNaN(flatNum) && flatNum >= 0) {
+          updates["system.attributes.ac.flat"] = flatNum;
+          updates["system.attributes.ac.calc"] = "flat";
+        }
+      } else if (baseVal !== "" || modVal !== "") {
+        const basePart = baseVal !== "" ? baseVal : "@attributes.ac.armor";
+        const modPart = modVal !== "" ? modVal : "@attributes.ac.dex";
+        updates["system.attributes.ac.calc"] = "custom";
+        updates["system.attributes.ac.formula"] = `${basePart} + ${modPart}`;
+      } else {
+        updates["system.attributes.ac.calc"] = "default";
+        updates["system.attributes.ac.formula"] = "";
+      }
+      return updates;
+    }
+
     private _setupACPanel() {
       const actor = this.document;
 
       const acPanel = this.element.querySelector(".bcs-ac-panel") as HTMLElement;
       const acPanelClose = this.element.querySelector(".bcs-ac-panel-close");
       const acPanelApply = this.element.querySelector(".bcs-ac-panel-apply");
+
+      // Prevent AC panel inputs from triggering Foundry's form auto-submission
+      acPanel?.querySelectorAll("input").forEach((inp: HTMLInputElement) => {
+        inp.addEventListener("change", (e) => e.stopPropagation());
+      });
 
       this.element.querySelectorAll('[data-action="open-ac"]').forEach((el: Element) => {
         el.addEventListener("click", () => {
@@ -1469,17 +1582,26 @@ export function createBetterCharacterSheet(): any {
         if (acPanel) acPanel.dataset.panel = "closed";
       });
 
-      acPanelApply?.addEventListener("click", () => {
-        const bonusInput = this.element.querySelector('.bcs-hp-edit-input[data-ac-field="bonus"]') as HTMLInputElement;
+      acPanelApply?.addEventListener("click", async () => {
+        const baseInput = this.element.querySelector('.bcs-hp-edit-input[data-ac-field="base"]') as HTMLInputElement;
+        const modInput = this.element.querySelector('.bcs-hp-edit-input[data-ac-field="modifier"]') as HTMLInputElement;
         const flatInput = this.element.querySelector('.bcs-hp-edit-input[data-ac-field="flat"]') as HTMLInputElement;
-        const updates: Record<string, any> = {};
-        if (bonusInput) updates["system.attributes.ac.bonus"] = parseInt(bonusInput.value, 10) || 0;
-        // Flat: empty string or NaN means null (use normal calculation)
-        if (flatInput) {
-          const flatVal = flatInput.value.trim();
-          updates["system.attributes.ac.flat"] = flatVal === "" ? null : parseInt(flatVal, 10);
-        }
-        actor.update(updates);
+
+        const baseVal = baseInput?.value?.trim() ?? "";
+        const modVal = modInput?.value?.trim() ?? "";
+        const flatVal = flatInput?.value?.trim() ?? "";
+
+        const toFlag = (v: string) => v === "" ? null : parseInt(v, 10);
+
+        // Single update: flags (to remember inputs) + system data (so dnd5e
+        // uses the correct AC for attack resolution).
+        await actor.update({
+          "flags.better-character-sheet.acBase": toFlag(baseVal),
+          "flags.better-character-sheet.acModifier": toFlag(modVal),
+          "flags.better-character-sheet.acFlat": toFlag(flatVal),
+          ...this._buildACSystemUpdates(baseVal, modVal, flatVal),
+        });
+
         if (acPanel) acPanel.dataset.panel = "closed";
       });
     }

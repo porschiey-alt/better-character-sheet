@@ -1,6 +1,6 @@
 {
   "name": "better-character-sheet",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A DnDBeyond-inspired character sheet replacement for FoundryVTT dnd5e",
   "type": "module",
   "scripts": {

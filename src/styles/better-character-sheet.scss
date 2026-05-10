@@ -2371,10 +2371,39 @@ $radius-sm: 4px;
     align-items: center;
     justify-content: space-between;
     padding: 10px 12px;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
     background: var(--bcs-bg-card-alt);
     border-radius: $radius;
     border: 1px solid $border-color;
+  }
+
+  .bcs-ac-breakdown {
+    padding: 6px 12px 10px;
+    margin-bottom: 16px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: $radius;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+
+    .bcs-ac-breakdown-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      font-size: 0.78rem;
+
+      &:not(:last-child) {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      }
+    }
+
+    .bcs-ac-breakdown-label {
+      color: $text-secondary;
+    }
+
+    .bcs-ac-breakdown-value {
+      color: $text-primary;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
   }
 
   .bcs-ac-summary-label {
