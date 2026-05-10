@@ -3,7 +3,7 @@
   <h3 class="bcs-section-title">Skills</h3>
   <ul class="bcs-skill-list">
     {{#each skills}}
-    <li class="bcs-skill-item" data-skill="{{key}}">
+    <li class="bcs-skill-item" data-skill="{{key}}" data-action="rollSkill">
       <span class="bcs-prof-dot
         {{#if (eq value 2)}}expert{{/if}}
         {{#if (eq value 1)}}proficient{{/if}}

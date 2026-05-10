@@ -20,7 +20,7 @@
     <div class="bcs-attunement-list">
       {{#each attunableItems}}
       <div class="bcs-attunement-item" data-item-id="{{id}}">
-        <span class="bcs-attune-check {{#if attuned}}attuned{{/if}}"></span>
+        <span class="bcs-attune-check {{#if attuned}}attuned{{/if}}" data-action="toggleAttunement"></span>
         <img src="{{img}}" alt="" class="bcs-item-icon" />
         <span class="bcs-attunement-name">{{name}}</span>
       </div>
@@ -60,7 +60,7 @@
         {{#each items}}
         <tr class="bcs-inv-row" data-item-id="{{id}}">
           <td class="col-active">
-            <span class="bcs-equip-check {{#if equipped}}equipped{{/if}}"></span>
+            <span class="bcs-equip-check {{#if equipped}}equipped{{/if}}" data-action="toggleEquipped"></span>
           </td>
           <td class="col-name">
             <div class="bcs-inv-name-cell">

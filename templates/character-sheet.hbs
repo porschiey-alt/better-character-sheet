@@ -7,7 +7,7 @@
     {{!-- Left: Ability Scores --}}
     <div class="bcs-row-left">
       {{#each abilities}}
-      <div class="bcs-ability" data-ability="{{key}}">
+      <div class="bcs-ability" data-ability="{{key}}" data-action="rollAbility">
         <div class="bcs-ability-label">{{abbr}}</div>
         <div class="bcs-ability-mod">{{ dnd5e-formatModifier mod }}</div>
         <div class="bcs-ability-score">{{value}}</div>
@@ -64,7 +64,7 @@
               <span class="bcs-ds-pip {{#if (gte system.attributes.death.failure 3)}}failure{{/if}}" data-ds-type="failure" data-ds-index="3">●</span>
             </span>
           </div>
-          <button type="button" class="bcs-ds-roll-btn" title="Roll Death Save">
+          <button type="button" class="bcs-ds-roll-btn" title="Roll Death Save" data-action="rollDeathSave">
             <i class="fas fa-dice-d20"></i> Roll
           </button>
           <button type="button" class="bcs-hp-btn bcs-heal-btn bcs-ds-heal-btn" data-action="heal">
@@ -122,7 +122,7 @@
           <div class="bcs-combat-card-label">Armor Class</div>
         </div>
 
-        <div class="bcs-combat-card bcs-combat-init">
+        <div class="bcs-combat-card bcs-combat-init" data-action="rollInitiative">
           <div class="bcs-combat-card-value">{{ dnd5e-numberFormat system.attributes.init.total signDisplay="always" }}</div>
           <div class="bcs-combat-card-label">Initiative</div>
         </div>
