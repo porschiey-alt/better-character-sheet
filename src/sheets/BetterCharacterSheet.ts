@@ -469,9 +469,13 @@ export function createBetterCharacterSheet(): any {
         if (/^https?:\/\//i.test(rawUrl)) {
           const header = this.element.querySelector(".bcs-header") as HTMLElement | null;
           if (header) {
+            const bgHex = context.themeBg || '#12151a';
+            const r = parseInt(bgHex.slice(1, 3), 16);
+            const g = parseInt(bgHex.slice(3, 5), 16);
+            const b = parseInt(bgHex.slice(5, 7), 16);
             header.style.setProperty(
               "background",
-              `linear-gradient(to right, rgba(18,21,26,0.85), rgba(18,21,26,0.5)), url('${rawUrl}') center / cover no-repeat`,
+              `linear-gradient(to right, rgba(${r},${g},${b},0.85), rgba(${r},${g},${b},0.5)), url('${rawUrl}') center / cover no-repeat`,
               "important"
             );
             header.classList.add("bcs-has-backdrop");
