@@ -413,35 +413,44 @@ export function createBetterCharacterSheet(): any {
       this._pendingAddDocs.length = 0;
       this._pendingAddIds.clear();
 
-      this._setupEditMode();
-      this._setupBackdrop(context);
-      this._setupTabs();
-      this._setupFilters();
-      this._setupRolls();
-      this._setupDeathSaves();
-      this._setupAttacks();
-      this._setupSpellDetailPanel();
-      this._setupInspiration();
-      this._setupSpellSlotPips();
-      this._setupManageSpells();
-      this._setupFeaturePips();
-      this._setupCombatActions();
-      this._setupActionFeatures();
-      this._setupItemSheets();
-      this._setupEquipAttune();
-      this._setupCurrencyPanel();
-      this._setupACPanel();
-      this._setupHPPanel();
-      this._setupConditionsPanel();
-      this._setupTheme();
-      this._setupDetailPanel();
-      this._emitCompatHook(context);
-      this._restoreScroll();
+      this._safeSetup("EditMode", () => this._setupEditMode());
+      this._safeSetup("Backdrop", () => this._setupBackdrop(context));
+      this._safeSetup("Tabs", () => this._setupTabs());
+      this._safeSetup("Filters", () => this._setupFilters());
+      this._safeSetup("Rolls", () => this._setupRolls());
+      this._safeSetup("DeathSaves", () => this._setupDeathSaves());
+      this._safeSetup("Attacks", () => this._setupAttacks());
+      this._safeSetup("SpellDetailPanel", () => this._setupSpellDetailPanel());
+      this._safeSetup("Inspiration", () => this._setupInspiration());
+      this._safeSetup("SpellSlotPips", () => this._setupSpellSlotPips());
+      this._safeSetup("ManageSpells", () => this._setupManageSpells());
+      this._safeSetup("FeaturePips", () => this._setupFeaturePips());
+      this._safeSetup("CombatActions", () => this._setupCombatActions());
+      this._safeSetup("ActionFeatures", () => this._setupActionFeatures());
+      this._safeSetup("ItemSheets", () => this._setupItemSheets());
+      this._safeSetup("EquipAttune", () => this._setupEquipAttune());
+      this._safeSetup("CurrencyPanel", () => this._setupCurrencyPanel());
+      this._safeSetup("ACPanel", () => this._setupACPanel());
+      this._safeSetup("HPPanel", () => this._setupHPPanel());
+      this._safeSetup("ConditionsPanel", () => this._setupConditionsPanel());
+      this._safeSetup("Theme", () => this._setupTheme());
+      this._safeSetup("DetailPanel", () => this._setupDetailPanel());
+      this._safeSetup("EmitCompatHook", () => this._emitCompatHook(context));
+      this._safeSetup("RestoreScroll", () => this._restoreScroll());
     }
 
     // ========================================
     // SETUP SUB-METHODS (extracted from _onRender)
     // ========================================
+
+    /** Wraps a setup step in try-catch so one failure doesn't abort the rest. */
+    private _safeSetup(name: string, fn: () => void) {
+      try {
+        fn();
+      } catch (err) {
+        console.error(`better-character-sheet | _setup${name} failed:`, err);
+      }
+    }
 
     private _setupEditMode() {
       // Restore edit mode toggle and CSS classes that the skipped parent chain provides
